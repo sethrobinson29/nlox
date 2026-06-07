@@ -106,8 +106,16 @@ proc scanToken(s: var Scanner) =
     of '<': s.addToken(if s.match('='): tkLessEqual else: tkLess)
     of '>': s.addToken(if s.match('='): tkGreaterEqual else: tkGreater)
     of '/':
-        if (s.match('/')):
-            while (s.peek() != '\n' and not s.isAtEnd()): discard s.advance()
+        if s.match('/'):
+            while s.peek() != '\n' and not s.isAtEnd(): discard s.advance()
+        elif s.match('*'):
+            while not s.isAtEnd():
+                if s.peek() == '*' and s.peekNext() == '/':
+                    discard s.advance()
+                    discard s.advance()
+                    break
+                if s.peek() == '\n': inc s.line
+                discard s.advance()
         else:
             s.addToken(tkSlash)
     of '\n': inc s.line
