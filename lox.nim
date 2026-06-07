@@ -1,20 +1,13 @@
 import std/cmdline
 import std/syncio
-import strformat
-
-# Error handling
-var hadError: bool = false
-
-proc report(line: int, where: string, message: string) = 
-    echo &"[line {line}] Error {where}: {message}"
-
-proc error(line: int, message: string) = 
-    report(line, "", message)
+import ./error
+import ./token
+import ./scanner
 
 # Run application
 proc run(source: string) = 
-    let scanner: Scanner = Scanner()
-    let tokens: Token = newSeq[Token]
+    var scanner: Scanner = Scanner(source: "")
+    let tokens: seq[Token] = scanner.scanTokens()
 
     for token in tokens:
         echo token
