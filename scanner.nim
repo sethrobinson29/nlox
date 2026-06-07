@@ -74,8 +74,11 @@ proc handleNumber(s: var Scanner) =
         discard s.advance()
         while (isDigit(s.peek())): discard s.advance()
     
-    let value = parseFloat(s.source[s.start..<s.current])
-    s.addToken(tkNumber, initLiteral(value))
+    try:
+        let value = parseFloat(s.source[s.start..<s.current])
+        s.addToken(tkNumber, initLiteral(value))
+    except ValueError:
+        loxError(s.line, "Invalid number.")
 
 proc handleIdentifier(s: var Scanner) = 
     while (isAlphaNumeric(s.peek())): discard s.advance()

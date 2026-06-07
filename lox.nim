@@ -13,9 +13,13 @@ proc run(source: string) =
         echo token
 
 proc runFile(path: string) =
-    let source = readFile(path)
-    run(source)
-    if hadError: quit(65)
+    try:
+        let source = readFile(path)
+        run(source)
+        if hadError: quit(65)
+    except IOError:
+        systemError("Could not read file: " & path)
+        quit(74)
 
 # Run REPL
 proc runPrompt() = 
@@ -28,6 +32,8 @@ proc runPrompt() =
             run(line)
             hadError = false
         except EOFError:
+            break
+        except IOError:
             break
 
 # Execute 

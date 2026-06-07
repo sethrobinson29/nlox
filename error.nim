@@ -7,3 +7,8 @@ proc loxReport*(line: int, where: string, message: string) =
 
 proc loxError*(line: int, message: string) = 
     loxReport(line, "", message)
+    hadError = true
+
+proc systemError*(message: string) = 
+    echo "Error: " & message
+    hadError = true
