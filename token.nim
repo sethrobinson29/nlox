@@ -34,6 +34,13 @@ type
         literal*: Literal
         line*: int
 
+# Literal constructors
+proc initLiteral*(s: string): Literal = Literal(kind: lkString, strVal: s)
+proc initLiteral*(b: bool): Literal = Literal(kind: lkBool, boolVal: b)
+proc initLiteral*(f: float): Literal = Literal(kind: lkFloat, floatVal: f)
+proc initLiteral*(): Literal = Literal(kind: lkNil)
+
+# Literals to string
 proc `$`*(lit: Literal): string = 
     case lit.kind
     of lkNil: "nil"

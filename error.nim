@@ -1,4 +1,4 @@
-import strformat
+import std/strformat
 
 var hadError*: bool = false
 

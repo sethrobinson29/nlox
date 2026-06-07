@@ -6,7 +6,7 @@ import ./scanner
 
 # Run application
 proc run(source: string) = 
-    var scanner: Scanner = Scanner(source: "")
+    var scanner: Scanner = Scanner(source: source)
     let tokens: seq[Token] = scanner.scanTokens()
 
     for token in tokens:
