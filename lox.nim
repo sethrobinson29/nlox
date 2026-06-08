@@ -1,13 +1,20 @@
 import std/cmdline
 import std/syncio
-import ./error
 import ./token
+import ./exprsn
 import ./scanner
+import ./parser
+import ./error
 
 # Run application
 proc run(source: string) = 
     var scanner: Scanner = Scanner(source: source)
     let tokens: seq[Token] = scanner.scanTokens()
+    var parser: Parser = Parser(tokens: tokens)
+    let expression: Expr = parser.parse()
+
+    # todo: remove debug outputs
+    echo expression
 
     for token in tokens:
         echo token

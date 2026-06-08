@@ -1,12 +1,21 @@
 import ./token
 import ./exprsn
+import ./error
 
 type 
     Parser* = object
-        tokens: seq[Token]
-        current: int
+        tokens*: seq[Token]
+        current: int = 0
 
 proc expression(p: var Parser): Expr
+proc parseError(p: var Parser, message: string): ref ParseError
+
+
+proc parse*(p: var Parser): Expr = 
+    try:
+        result = p.expression()
+    except ParseError:
+        result = nil
 
 proc peek(p: var Parser): Token = 
     result = p.tokens[p.current]
@@ -22,12 +31,14 @@ proc advance(p: var Parser): Token =
     result = p.previous()
 
 proc check(p: var Parser, t: TokenType): bool = 
-    if (not p.isAtEnd()): inc p.current
+    if (p.isAtEnd()): return false
     result = p.peek().tkType == t
 
-proc consume(p: var Parser, t: TokenType, message: string) = 
-    # todo
-    discard
+proc consume(p: var Parser, t: TokenType, message: string): Token = 
+    if (p.check(t)): 
+        return p.advance()
+    loxError(p.peek(), message)
+    raise p.parseError(message)
 
 proc match(p: var Parser, types: varargs[TokenType]): bool = 
     for t in types:
@@ -46,8 +57,10 @@ proc primary(p: var Parser): Expr =
 
     if (p.match(tkLeftParen)):
         let ex = p.expression()
-        p.consume(tkRightParen, "Except ')' after expression.")
+        discard p.consume(tkRightParen, "Except ')' after expression.")
         return newGrouping(ex)
+
+    raise p.parseError("Expect expression")
 
 proc unary(p: var Parser): Expr = 
     if (p.match(tkBang, tkMinus)):
@@ -90,4 +103,20 @@ proc equality(p: var Parser): Expr =
 proc expression(p: var Parser): Expr = 
     result = p.equality()
 
+proc parseError(p: var Parser, message: string): ref ParseError =
+    loxError(p.peek(), message)
+    result = newException(ParseError, message)
 
+proc synchronize(p: var Parser) = 
+    discard p.advance()
+    
+    while (not p.isAtEnd()):
+        if (p.previous().tkType == tkSemicolon): return
+        
+        case p.peek().tkType:
+        of tkClass, tkFun, tkVar, tkFor, tkIf, tkWhile, tkPrint, tkReturn:
+            return
+        else: 
+            discard
+    
+    discard p.advance()
