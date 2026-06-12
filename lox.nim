@@ -1,7 +1,8 @@
 import std/cmdline
 import std/syncio
+import ./statement
+import ./expression
 import ./token
-import ./exprsn
 import ./scanner
 import ./parser
 import ./interpreter
@@ -12,11 +13,11 @@ proc run(source: string) =
     var scanner: Scanner = Scanner(source: source)
     let tokens: seq[Token] = scanner.scanTokens()
     var parser: Parser = Parser(tokens: tokens)
-    let expression: Expr = parser.parse()
+    let statements: seq[Stmt] = parser.parse()
 
     if hadError: return
 
-    interpret(expression)
+    interpret(statements)
     # todo: remove debug outputs
     # echo expression
 

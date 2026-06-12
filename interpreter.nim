@@ -1,4 +1,5 @@
-import ./exprsn
+import ./statement
+import ./expression
 import ./token
 import ./error
 
@@ -69,11 +70,23 @@ proc evaluate*(ex: Expr): Literal =
         of tkBangEqual: initLiteral(not isEqual(left, right))
         of tkEqualEqual: initLiteral(isEqual(left, right))
         else: initLiteral()
+    of ekVar:
+        initLiteral()
 
 
-proc interpret*(ex: Expr) = 
-    try:
-        var val = evaluate(ex)
+proc execute(st: Stmt) = 
+    case st.kind:
+    of skExpression:
+        discard evaluate(st.expression)
+    of skPrint:
+        let val = evaluate(st.printExpr)
         echo $val
+    of skVar:
+        discard
+
+proc interpret*(statements: seq[Stmt]) = 
+    try:
+        for statement in statements:
+            execute(statement)
     except RuntimeError as e:
         reportRuntimeError(e)

@@ -1,5 +1,6 @@
+import ./statement
+import ./expression
 import ./token
-import ./exprsn
 import ./error
 
 type 
@@ -8,14 +9,19 @@ type
         current: int = 0
 
 proc expression(p: var Parser): Expr
+proc statement(p: var Parser): Stmt
+proc declaration(p: var Parser): Stmt
 proc parseError(p: var Parser, message: string): ref ParseError
+proc isAtEnd(p: var Parser): bool
+proc synchronize(p: var Parser)
 
 
-proc parse*(p: var Parser): Expr = 
-    try:
-        result = p.expression()
-    except ParseError:
-        result = nil
+proc parse*(p: var Parser): seq[Stmt] = 
+    var statements: seq[Stmt]
+    while (not p.isAtEnd()):
+        statements.add(p.declaration())
+
+    return statements
 
 proc peek(p: var Parser): Token = 
     result = p.tokens[p.current]
@@ -37,7 +43,6 @@ proc check(p: var Parser, t: TokenType): bool =
 proc consume(p: var Parser, t: TokenType, message: string): Token = 
     if (p.check(t)): 
         return p.advance()
-    loxError(p.peek(), message)
     raise p.parseError(message)
 
 proc match(p: var Parser, types: varargs[TokenType]): bool = 
@@ -54,6 +59,8 @@ proc primary(p: var Parser): Expr =
     if (p.match(tkNil)): return newLiteral(initLiteral())
 
     if (p.match(tkNumber, tkString)): return newLiteral(p.previous().literal)
+
+    if (p.match(tkIdentifier)): return newVariable(p.previous())
 
     if (p.match(tkLeftParen)):
         let ex = p.expression()
@@ -110,8 +117,42 @@ proc equality(p: var Parser): Expr =
     
     result = ex
 
+proc expressionStatement(p: var Parser): Stmt = 
+    let val = p.expression()
+    discard p.consume(tkSemicolon, "Expect ';' after expression.")
+    result = newExpressionStmt(val)
+
+proc printStatement(p: var Parser): Stmt = 
+    let val = p.expression()
+    discard p.consume(tkSemicolon, "Expect ';' after value.")
+    result = newPrintStmt(val)
+
+proc varDeclaration(p: var Parser): Stmt = 
+    let name = p.consume(tkIdentifier, "Expect variable name")
+    var initializer: Expr = nil
+
+    if (p.match(tkEqual)):
+        initializer = p.expression()
+
+    discard p.consume(tkSemicolon, "Expect ';' after variable declaration")
+    return newVarStmt(name, initializer)
+
 proc expression(p: var Parser): Expr = 
     result = p.equality()
+
+proc statement(p: var Parser): Stmt =
+    if (p.match(tkPrint)): return p.printStatement()
+
+    result = p.expressionStatement()
+
+proc declaration(p: var Parser): Stmt = 
+    try:
+        if (p.match(tkVar)): return p.varDeclaration()
+
+        result = p.statement()
+    except ParseError:
+        p.synchronize()
+        result = nil
 
 proc parseError(p: var Parser, message: string): ref ParseError =
     loxError(p.peek(), message)
