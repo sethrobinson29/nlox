@@ -80,12 +80,22 @@ proc factor(p: var Parser): Expr =
     
     result = ex
 
-proc comparison(p: var Parser): Expr =
+proc term(p: var Parser): Expr = 
     var ex = p.factor()
 
     while (p.match(tkMinus, tkPlus)):
         let operator = p.previous()
         let right = p.factor()
+        ex = newBinary(ex, operator, right)
+
+    result = ex
+
+proc comparison(p: var Parser): Expr =
+    var ex = p.term()
+
+    while (p.match(tkGreater, tkGreaterEqual, tkLess, tkLessEqual)):
+        let operator = p.previous()
+        let right = p.term()
         ex = newBinary(ex, operator, right)
 
     result = ex

@@ -3,8 +3,11 @@ import ./token
 
 type 
     ParseError* = object of CatchableError 
+    RuntimeError* = object of CatchableError
+        token*: Token
 
 var hadError*: bool = false
+var hadRuntimeError*: bool = false
 
 proc loxReport*(line: int, where: string, message: string) = 
     echo &"[line {line}] Error {where}: {message}"
@@ -26,3 +29,12 @@ proc loxError*(token: Token, message: string) =
 proc systemError*(message: string) = 
     echo "Error: " & message
     hadError = true
+
+# runtime error
+proc newRuntimeError*(token: Token, message: string): ref RuntimeError = 
+    result = newException(RuntimeError, message)
+    result.token = token
+
+proc reportRuntimeError*(error: ref RuntimeError) =
+    echo error.msg & "\n[line " & $error.token.line & "]"
+    hadRuntimeError = true

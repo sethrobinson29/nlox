@@ -45,7 +45,12 @@ proc `$`*(lit: Literal): string =
     case lit.kind
     of lkNil: "nil"
     of lkBool: $lit.boolVal
-    of lkFloat: $lit.floatVal
+    of lkFloat: 
+        let f = lit.floatVal
+        if f == f.int.float:
+            $f.int
+        else: 
+            $f
     of lkString: lit.strVal
 
 proc tkToString*(token: Token): string = 

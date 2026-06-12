@@ -4,6 +4,7 @@ import ./token
 import ./exprsn
 import ./scanner
 import ./parser
+import ./interpreter
 import ./error
 
 # Run application
@@ -13,17 +14,21 @@ proc run(source: string) =
     var parser: Parser = Parser(tokens: tokens)
     let expression: Expr = parser.parse()
 
-    # todo: remove debug outputs
-    echo expression
+    if hadError: return
 
-    for token in tokens:
-        echo token
+    interpret(expression)
+    # todo: remove debug outputs
+    # echo expression
+
+    # for token in tokens:
+    #     echo token
 
 proc runFile(path: string) =
     try:
         let source = readFile(path)
         run(source)
         if hadError: quit(65)
+        if hadRuntimeError: quit(70)
     except IOError:
         systemError("Could not read file: " & path)
         quit(74)
@@ -38,6 +43,7 @@ proc runPrompt() =
                 break
             run(line)
             hadError = false
+            hadRuntimeError = false
         except EOFError:
             break
         except IOError:
