@@ -42,29 +42,9 @@ and operations over them (`AstPrinter`, `Interpreter`) use the **visitor
 pattern** — double dispatch via `accept()`/`visitXyz()` — to work around
 Java's lack of sum types.
 
-Nim has sum types natively: variant objects (`case` inside an `object`).
-
-```nim
-type
-  ExprKind* = enum
-    ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar
-
-  Expr* = ref object
-    case kind*: ExprKind
-    of ekBinary:
-      left*: Expr
-      operator*: Token
-      right*: Expr
-    of ekUnary:
-      unaryOp*: Token
-      unaryRight*: Expr
-    of ekLiteral:
-      value*: Literal
-    of ekGrouping:
-      expression*: Expr
-    of ekVar:
-      name*: Token
-```
+Nim has sum types natively: variant objects (`case` inside an `object`). See
+the `Expr`/`ExprKind` definition in `exprsn.nim` and `Stmt`/`StmtKind` in
+`stmt.nim`.
 
 Any operation is one recursive proc with `case expr.kind` — no `accept`, no
 visitor interface, no `GenerateAst.java` step.
@@ -83,47 +63,19 @@ compiler-enforced and arguably clearer at call sites.
 
 `Literal`'s variants are distinguished by *type* (`bool`/`float`/`string`), so
 one overloaded `initLiteral` works — Nim picks the variant from the argument
-type:
-
-```nim
-proc initLiteral*(s: string): Literal = Literal(kind: lkString, strVal: s)
-proc initLiteral*(b: bool): Literal = Literal(kind: lkBool, boolVal: b)
-proc initLiteral*(f: float): Literal = Literal(kind: lkFloat, floatVal: f)
-proc initLiteral*(): Literal = Literal(kind: lkNil)
-```
+type. See `initLiteral` overloads in `token.nim`.
 
 `Expr`/`Stmt` variants often share argument *types* (e.g. `skExpression` and
 `skPrint` both wrap an `Expr`), so overloading would be ambiguous. These get
-named constructors instead, one per variant:
-
-```nim
-proc newBinary*(left: Expr, op: Token, right: Expr): Expr =
-  Expr(kind: ekBinary, left: left, operator: op, right: right)
-
-proc newExpressionStmt*(ex: Expr): Stmt =
-  Stmt(kind: skExpression, expression: ex)
-
-proc newPrintStmt*(ex: Expr): Stmt =
-  Stmt(kind: skPrint, printExpr: ex)
-```
+named constructors instead, one per variant — see `newBinary`, `newUnary`,
+etc. in `exprsn.nim` and `newExpressionStmt`/`newPrintStmt`/`newVarStmt` in
+`stmt.nim`.
 
 ## `Object` → `Literal`
 
 Java uses `Object` (+ autoboxing) as the universal runtime value for Lox's
-dynamic typing. Nim equivalent is an explicit variant object:
-
-```nim
-type
-  LiteralKind* = enum
-    lkNil, lkBool, lkFloat, lkString
-
-  Literal* = object
-    case kind*: LiteralKind
-    of lkNil: discard
-    of lkBool: boolVal*: bool
-    of lkFloat: floatVal*: float
-    of lkString: strVal*: string
-```
+dynamic typing. Nim equivalent is an explicit variant object — see
+`Literal`/`LiteralKind` in `token.nim`.
 
 Used both for token literals (scanner output) and runtime values (`evaluate`
 result, `Environment` storage). Anywhere the book says `Object`, this codebase
@@ -156,13 +108,8 @@ Nim's `nil` is only valid for `ref` types, not `object` value types.
 ## Exceptions: `error()` returns rather than throws
 
 The book's `Parser.error()` *returns* a `ParseError` rather than throwing,
-letting the caller decide whether to unwind:
-
-```nim
-proc parseError(p: var Parser, message: string): ref ParseError =
-  loxError(p.peek(), message)
-  result = newException(ParseError, message)
-```
+letting the caller decide whether to unwind. See `parseError` in
+`parser.nim`:
 
 ```nim
 raise p.parseError("Expect expression.")        # unwind
@@ -175,8 +122,7 @@ alongside `hadError`/`hadRuntimeError` flags and reporting procs (`loxReport`,
 `newRuntimeError`) for line-number reporting.
 
 A third variant — report without constructing/raising anything — shows up in
-`assignment()`. The book's invalid-assignment-target error reports via
-`error(equals, "...")` but doesn't throw; parsing continues:
+`assignment()` (`parser.nim`) for the invalid-assignment-target case:
 
 ```nim
 if ex.kind == ekVar:
@@ -245,29 +191,5 @@ Java's `Map` is always reference-typed. `std/tables` splits this:
   `Environment.values`.
 - **`TableRef[K, V]`** — reference type, via `newTable[K, V]()`.
 
-```nim
-type Environment* = object
-  values: Table[string, Literal]
-
-var env = Environment(values: initTable[string, Literal]())
-```
-
 `newTable`/`TableRef` only needed if `values` itself had to be independently
 shared as a reference — not the case here.
-
-## File organization
-
-| File | Contents | Java equivalent |
-|---|---|---|
-| `token.nim` | `TokenType`, `LiteralKind`, `Literal`, `Token`, constructors, `$` | `TokenType.java`, `Token.java` |
-| `error.nim` | error flags, `ParseError`, `RuntimeError`, reporting procs | error bits of `Lox.java` |
-| `scanner.nim` | `Scanner` + lexing procs | `Scanner.java` |
-| `exprsn.nim` | `Expr` variant object, constructors, AST printer `$` | `Expr.java` (generated) + `AstPrinter.java` |
-| `stmt.nim` | `Stmt` variant object, constructors | `Stmt.java` (generated) |
-| `parser.nim` | `Parser` + parsing procs | `Parser.java` |
-| `environment.nim` | `Environment` (name → `Literal` table) | `Environment.java` |
-| `interpreter.nim` | `evaluate`/`execute`/`interpret` (free procs) | `Interpreter.java` |
-| `lox.nim` | entry point, `run`/`runFile`/`runPrompt` | `Lox.java` |
-
-Notably absent: `GenerateAst.java` equivalent (variant objects are short
-enough to write by hand) and any `Visitor`/`Accept` interfaces.
