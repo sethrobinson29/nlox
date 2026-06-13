@@ -1,5 +1,7 @@
 import std/cmdline
 import std/syncio
+import std/tables
+import ./environment
 import ./statement
 import ./expression
 import ./token
@@ -9,7 +11,7 @@ import ./interpreter
 import ./error
 
 # Run application
-proc run(source: string) = 
+proc run(source: string, env: var Environment) = 
     var scanner: Scanner = Scanner(source: source)
     let tokens: seq[Token] = scanner.scanTokens()
     var parser: Parser = Parser(tokens: tokens)
@@ -17,7 +19,7 @@ proc run(source: string) =
 
     if hadError: return
 
-    interpret(statements)
+    interpret(statements, env)
     # todo: remove debug outputs
     # echo expression
 
@@ -27,7 +29,8 @@ proc run(source: string) =
 proc runFile(path: string) =
     try:
         let source = readFile(path)
-        run(source)
+        var env = Environment(values: initTable[string, Literal]())
+        run(source, env)
         if hadError: quit(65)
         if hadRuntimeError: quit(70)
     except IOError:
@@ -39,10 +42,11 @@ proc runPrompt() =
     while true:
         stdout.write("> ")
         try:
+            var env = Environment(values: initTable[string, Literal]())
             let line: string = readLine(stdin)
             if line.len == 0:
                 break
-            run(line)
+            run(line, env)
             hadError = false
             hadRuntimeError = false
         except EOFError:

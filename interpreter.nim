@@ -1,3 +1,4 @@
+import ./environment
 import ./statement
 import ./expression
 import ./token
@@ -23,12 +24,12 @@ proc checkNumberOperand(op: Token, operand: Literal) =
 proc checkNumberOperands(op: Token, left: Literal, right: Literal) = 
     if (left.kind != lkFloat or right.kind != lkFloat): raise newRuntimeError(op, "Operands must be numbers.")
 
-proc evaluate*(ex: Expr): Literal =
+proc evaluate*(ex: Expr, env: var Environment): Literal =
     case ex.kind:
     of ekLiteral: ex.value
-    of ekGrouping: evaluate(ex.expression)
+    of ekGrouping: evaluate(ex.expression, env)
     of ekUnary:
-        let right = evaluate(ex.unaryRight)
+        let right = evaluate(ex.unaryRight, env)
 
         case (ex.unaryOp.tkType):
         of tkBang: initLiteral(not isTruthy(right))
@@ -37,8 +38,8 @@ proc evaluate*(ex: Expr): Literal =
             initLiteral(-right.floatVal)
         else: initLiteral()
     of ekBinary:
-        let left = evaluate(ex.left)
-        let right = evaluate(ex.right)
+        let left = evaluate(ex.left, env)
+        let right = evaluate(ex.right, env)
 
         case (ex.operator.tkType):
         of tkMinus: 
@@ -71,22 +72,29 @@ proc evaluate*(ex: Expr): Literal =
         of tkEqualEqual: initLiteral(isEqual(left, right))
         else: initLiteral()
     of ekVar:
-        initLiteral()
+        env.get(ex.name)
+    of ekAssign:
+        let val = evaluate(ex.assignExpr, env)
+        env.assign(ex.token, val)
+        val
 
 
-proc execute(st: Stmt) = 
+proc execute(st: Stmt, env: var Environment) = 
     case st.kind:
     of skExpression:
-        discard evaluate(st.expression)
+        discard evaluate(st.expression, env)
     of skPrint:
-        let val = evaluate(st.printExpr)
+        let val = evaluate(st.printExpr, env)
         echo $val
     of skVar:
-        discard
+        var value = initLiteral()
+        if st.varExpr != nil:
+            value = evaluate(st.varExpr, env)
+        env.define(st.name.lexeme, value)
 
-proc interpret*(statements: seq[Stmt]) = 
+proc interpret*(statements: seq[Stmt], env: var Environment) = 
     try:
         for statement in statements:
-            execute(statement)
+            execute(statement, env)
     except RuntimeError as e:
         reportRuntimeError(e)

@@ -9,6 +9,7 @@ type
         current: int = 0
 
 proc expression(p: var Parser): Expr
+proc assignment(p: var Parser): Expr
 proc statement(p: var Parser): Stmt
 proc declaration(p: var Parser): Stmt
 proc parseError(p: var Parser, message: string): ref ParseError
@@ -138,7 +139,22 @@ proc varDeclaration(p: var Parser): Stmt =
     return newVarStmt(name, initializer)
 
 proc expression(p: var Parser): Expr = 
-    result = p.equality()
+    result = p.assignment()
+
+proc assignment(p: var Parser): Expr = 
+    let ex = p.equality()
+
+    if (p.match(tkEqual)):
+        let equals = p.previous()
+        let val = p.assignment()
+
+        if (ex.kind == ekVar):
+            let token = ex.name
+            return newAssignment(token, val)
+
+        loxError(equals, "Invalid assignment target.")
+
+    result = ex
 
 proc statement(p: var Parser): Stmt =
     if (p.match(tkPrint)): return p.printStatement()
