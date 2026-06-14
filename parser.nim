@@ -118,6 +118,13 @@ proc equality(p: var Parser): Expr =
     
     result = ex
 
+# handle expressions in REPL
+proc parseExpr*(p: var Parser): Expr =
+    try:
+        result = p.expression()
+    except ParseError:
+        result = nil
+
 proc expressionStatement(p: var Parser): Stmt = 
     let val = p.expression()
     discard p.consume(tkSemicolon, "Expect ';' after expression.")

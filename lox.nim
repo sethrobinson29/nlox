@@ -10,12 +10,29 @@ import ./parser
 import ./interpreter
 import ./error
 
+# keywords that begin statements — skip expression fallback in REPL
+const statementKeywords = {tkVar, tkPrint, tkIf, tkWhile, tkFor, tkFun, tkClass, tkReturn}
+
 # Run application
-proc run(source: string, env: var Environment) = 
-    var scanner: Scanner = Scanner(source: source)
-    let tokens: seq[Token] = scanner.scanTokens()
-    var parser: Parser = Parser(tokens: tokens)
-    let statements: seq[Stmt] = parser.parse()
+proc run(source: string, env: var Environment, isRepl: bool = false) = 
+    var scanner = Scanner(source: source)
+    let tokens = scanner.scanTokens()
+
+    if (isRepl):
+        # token check avoids parseExpr printing errors on statement keywords before fallback
+        let firstToken = tokens[0].tkType
+        let startsWithKeyword = firstToken in statementKeywords
+
+        if not startsWithKeyword:
+            var exParser = Parser(tokens: tokens)
+            let ex = exParser.parseExpr()
+            if not hadError and ex != nil:
+                interpret(@[newPrintStmt(ex)], env)
+                return
+            hadError = false
+
+    var parser = Parser(tokens: tokens)
+    let statements = parser.parse()
 
     if hadError: return
 
@@ -46,7 +63,7 @@ proc runPrompt() =
             let line: string = readLine(stdin)
             if line.len == 0:
                 break
-            run(line, env)
+            run(line, env, true)
             hadError = false
             hadRuntimeError = false
         except EOFError:
