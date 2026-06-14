@@ -1,8 +1,11 @@
+import std/tables
 import ./environment
 import ./statement
 import ./expression
 import ./token
 import ./error
+
+proc execute(st: Stmt, env: var Environment)
 
 proc isTruthy(litr: Literal): bool = 
     case litr.kind:
@@ -78,6 +81,9 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
         env.assign(ex.token, val)
         val
 
+proc executeBlock(statements: seq[Stmt], env: var Environment) = 
+    for statement in statements:
+        execute(statement, env)
 
 proc execute(st: Stmt, env: var Environment) = 
     case st.kind:
@@ -91,6 +97,10 @@ proc execute(st: Stmt, env: var Environment) =
         if st.varExpr != nil:
             value = evaluate(st.varExpr, env)
         env.define(st.name.lexeme, value)
+    of skBlock:
+        var blockEnv = Environment(enclosing: env, values: initTable[string, Literal]())
+        executeBlock(st.statements, blockEnv)
+         
 
 proc interpret*(statements: seq[Stmt], env: var Environment) = 
     try:

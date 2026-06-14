@@ -29,7 +29,7 @@ proc run(source: string, env: var Environment) =
 proc runFile(path: string) =
     try:
         let source = readFile(path)
-        var env = Environment(values: initTable[string, Literal]())
+        var env = Environment(values: initTable[string, Literal](), enclosing: nil)
         run(source, env)
         if hadError: quit(65)
         if hadRuntimeError: quit(70)

@@ -128,6 +128,15 @@ proc printStatement(p: var Parser): Stmt =
     discard p.consume(tkSemicolon, "Expect ';' after value.")
     result = newPrintStmt(val)
 
+proc blockStatement(p: var Parser): seq[Stmt] = 
+    var statements: seq[Stmt]
+
+    while (not p.check(tkRightBrace) and not p.isAtEnd()):
+        statements.add(p.declaration())
+
+    discard p.consume(tkRightBrace, "Expect '}' after block.")
+    return statements
+
 proc varDeclaration(p: var Parser): Stmt = 
     let name = p.consume(tkIdentifier, "Expect variable name")
     var initializer: Expr = nil
@@ -158,6 +167,7 @@ proc assignment(p: var Parser): Expr =
 
 proc statement(p: var Parser): Stmt =
     if (p.match(tkPrint)): return p.printStatement()
+    if (p.match(tkLeftBrace)): return newBlockStmt(p.blockStatement())
 
     result = p.expressionStatement()
 
