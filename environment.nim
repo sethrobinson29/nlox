@@ -1,11 +1,7 @@
 import std/tables
-import ./token
+import ./types
 import ./error
-
-type 
-    Environment* = ref object
-        values*: Table[string, Literal]
-        enclosing*: Environment
+    
 
 proc define*(env: var Environment, name: string, val: Literal) =
     env.values[name] = val

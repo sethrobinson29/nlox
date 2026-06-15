@@ -1,8 +1,7 @@
 import std/tables
 import ./environment
-import ./statement
-import ./expression
-import ./token
+import ./types
+import ./literal
 import ./error
 
 proc execute(st: Stmt, env: var Environment)
@@ -20,6 +19,9 @@ proc isEqual(left, right: Literal): bool =
     of lkBool: left.boolVal == right.boolVal
     of lkFloat: left.floatVal == right.floatVal
     of lkString: left.strVal == right.strVal
+    else:
+        #todo
+        false
 
 proc checkNumberOperand(op: Token, operand: Literal) =
     if (operand.kind != lkFloat): raise newRuntimeError(op, "Operand must be a number.")
@@ -90,6 +92,15 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
         let val = evaluate(ex.assignExpr, env)
         env.assign(ex.token, val)
         val
+    of ekCall:
+        let callee = evaluate(ex.callee, env)
+        if callee.kind notin {lkFunction, lkClass}:
+            raise newRuntimeError(ex.paren, "Can only call functions and classes.")
+
+        if (ex.args.len != callee.arity()):
+            raise newRuntimeError(ex.paren, "Expected " & $callee.arity() & " arguments but got " & $ex.args.len & ".")
+        # todo
+        initLiteral()
 
 proc executeBlock(statements: seq[Stmt], env: var Environment) = 
     for statement in statements:
@@ -123,6 +134,8 @@ proc execute(st: Stmt, env: var Environment) =
             discard
     of skBreak:
         raise newException(BreakException, "")
+    of skFunction:
+        discard
          
 
 proc interpret*(statements: seq[Stmt], env: var Environment) = 

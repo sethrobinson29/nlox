@@ -1,10 +1,8 @@
 import std/cmdline
 import std/syncio
 import std/tables
-import ./environment
+import ./types
 import ./statement
-import ./expression
-import ./token
 import ./scanner
 import ./parser
 import ./interpreter

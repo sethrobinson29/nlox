@@ -1,5 +1,5 @@
 import std/strformat
-import ./token
+import ./types
 
 type 
     ParseError* = object of CatchableError 

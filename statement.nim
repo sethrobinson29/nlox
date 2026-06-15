@@ -1,30 +1,5 @@
-import ./expression
-import ./token
-
-type 
-    StmtKind* = enum 
-        skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak
-
-    Stmt* = ref object
-        case kind*: StmtKind
-        of skExpression: 
-            expression*: Expr
-        of skPrint:
-            printExpr*: Expr
-        of skVar:
-            name*: Token
-            varExpr*: Expr
-        of skBlock:
-            statements*: seq[Stmt]
-        of skIf:
-            condition*: Expr
-            thenBranch*: Stmt
-            elseBranch*: Stmt
-        of skWhile:
-            con*: Expr
-            body*: Stmt
-        of skBreak:
-            discard
+# statement functionality
+import ./types
         
 
 proc newExpressionStmt*(ex: Expr): Stmt = 
@@ -47,3 +22,6 @@ proc newWhileStmt*(con: Expr, body: Stmt): Stmt =
 
 proc newBreakStmt*(): Stmt = 
     Stmt(kind: skBreak)
+
+proc newFunctionStmt(name: Token, params: seq[Token], body: seq[Stmt]): Stmt = 
+    Stmt(kind: skFunction, funcName: name, params: params, funcBody: body)

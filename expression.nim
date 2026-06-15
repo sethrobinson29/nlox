@@ -1,27 +1,5 @@
-import ./token
-
-type 
-    ExprKind* = enum
-        ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar, ekAssign
-
-    Expr* = ref object
-        case kind*: ExprKind
-        of ekBinary:
-            left*: Expr
-            operator*: Token
-            right*: Expr
-        of ekUnary:
-            unaryOp*: Token
-            unaryRight*: Expr
-        of ekLiteral:
-            value*: Literal
-        of ekGrouping:
-            expression*: Expr
-        of ekVar:
-            name*: Token
-        of ekAssign:
-            token*: Token
-            assignExpr*: Expr
+# expression functionality 
+import ./types
 
 # Expr constructors
 proc newBinary*(leftExpr: Expr, op: Token, rightExpr: Expr): Expr = Expr(kind: ekBinary, left: leftExpr, operator: op, right: rightExpr)
@@ -30,6 +8,7 @@ proc newLiteral*(val: Literal): Expr = Expr(kind: ekLiteral, value: val)
 proc newGrouping*(ex: Expr): Expr = Expr(kind: ekGrouping, expression: ex)
 proc newVariable*(name: Token): Expr = Expr(kind: ekVar, name: name)
 proc newAssignment*(token: Token, ex: Expr): Expr = Expr(kind: ekAssign, token: token, assignExpr: ex)
+proc newCall*(callee: Expr, paren: Token, args: seq[Expr]): Expr = Expr(kind: ekCall, callee: callee, paren: paren, args: args)
 
 proc `$`*(ex: Expr): string =
     if (ex == nil): return "nil"
@@ -40,3 +19,4 @@ proc `$`*(ex: Expr): string =
     of ekGrouping: "(group " & $ex.expression & ")"
     of ekVar: ex.name.lexeme
     of ekAssign: "(= " & ex.name.lexeme & " " & $ex.value & ")"
+    of ekCall: "func [" & $ex.callee & "] with args ( " & $ex.args & ") " # todo: may want to change

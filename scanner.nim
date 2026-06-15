@@ -1,6 +1,7 @@
 import std/strutils
 import std/tables
-import ./token
+import ./types
+import ./literal
 import ./error
 
 type 

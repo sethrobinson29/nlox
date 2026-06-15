@@ -1,6 +1,7 @@
 import ./statement
 import ./expression
-import ./token
+import ./types
+import ./literal
 import ./error
 
 type 
@@ -71,13 +72,36 @@ proc primary(p: var Parser): Expr =
 
     raise p.parseError("Expect expression")
 
+proc finishCall(p: var Parser, ex: Expr): Expr = 
+    var args: seq[Expr] = @[]
+
+    if (not p.check(tkRightParen)):
+        if (args.len >= 255): loxError(p.peek(), "Cannot have more than 255 arguments.")
+        args.add(p.expression())
+        while (p.match(tkComma)):
+            args.add(p.expression())
+    let paren = p.consume(tkRightParen, "Expect ')' after arguments.")
+
+    result = newCall(ex, paren, args)
+
+proc call(p: var Parser): Expr = 
+    var ex = p.primary()
+
+    while (true):
+        if (p.match(tkLeftParen)):
+            ex = p.finishCall(ex)
+        else:
+            break;
+    
+    result = ex
+
 proc unary(p: var Parser): Expr = 
     if (p.match(tkBang, tkMinus)):
         let operator = p.previous()
         let right = p.unary()
         return newUnary(operator, right)
 
-    result = p.primary()
+    result = p.call()
 
 proc factor(p: var Parser): Expr = 
     var ex = p.unary()
@@ -174,7 +198,6 @@ proc whileStatement(p: var Parser): Stmt =
     discard p.consume(tkRightParen, "Expect ')' after condition.")
 
     let body = p.statement()
-
     p.inLoop = prevInLoop
     result = newWhileStmt(condition, body)
 
