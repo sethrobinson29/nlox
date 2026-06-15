@@ -41,6 +41,16 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
             initLiteral(-right.floatVal)
         else: initLiteral()
     of ekBinary:
+        # short circuit for and/or
+        if ex.operator.tkType == tkAnd:
+            let left = evaluate(ex.left, env)
+            if not isTruthy(left): return left
+            return evaluate(ex.right, env)
+        if ex.operator.tkType == tkOr:
+            let left = evaluate(ex.left, env)
+            if isTruthy(left): return left
+            return evaluate(ex.right, env)
+
         let left = evaluate(ex.left, env)
         let right = evaluate(ex.right, env)
 
@@ -100,6 +110,14 @@ proc execute(st: Stmt, env: var Environment) =
     of skBlock:
         var blockEnv = Environment(enclosing: env, values: initTable[string, Literal]())
         executeBlock(st.statements, blockEnv)
+    of skIf:
+        if (isTruthy(evaluate(st.condition, env))):
+            execute(st.thenBranch, env)
+        elif (st.elseBranch != nil):
+            execute(st.elseBranch, env)
+    of skWhile:
+        while (isTruthy(evaluate(st.con, env))):
+            execute(st.body, env)
          
 
 proc interpret*(statements: seq[Stmt], env: var Environment) = 

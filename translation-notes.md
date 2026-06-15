@@ -59,6 +59,21 @@ names across variants — `unaryRight`/`right`, `printExpr`/`expression`,
 `varExpr`/`expression`, etc. Main verbosity cost vs. inheritance, but
 compiler-enforced and arguably clearer at call sites.
 
+## Handling Precedence of Logical and Binary Expression
+
+Where the book splits `Logical` from `Binary` (to give `visitLogicalExpr` its own method), 
+Nim needs no separate variant — short-circuit behavior is handled inside the 
+`ekBinary` branch of evaluate by checking the operator type before evaluating both sides:
+
+```nim 
+of ekBinary:
+    if ex.operator.tkType == tkAnd:
+        let left = evaluate(ex.left, env)
+        if not isTruthy(left): return left
+        return evaluate(ex.right, env)
+    # ... rest of binary evaluation
+```
+
 ## Named constructors instead of overloading
 
 `Literal`'s variants are distinguished by *type* (`bool`/`float`/`string`), so

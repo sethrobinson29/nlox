@@ -118,6 +118,16 @@ proc equality(p: var Parser): Expr =
     
     result = ex
 
+proc varDeclaration(p: var Parser): Stmt = 
+    let name = p.consume(tkIdentifier, "Expect variable name")
+    var initializer: Expr = nil
+
+    if (p.match(tkEqual)):
+        initializer = p.expression()
+
+    discard p.consume(tkSemicolon, "Expect ';' after variable declaration")
+    return newVarStmt(name, initializer)
+
 # handle expressions in REPL
 proc parseExpr*(p: var Parser): Expr =
     try:
@@ -135,6 +145,7 @@ proc printStatement(p: var Parser): Stmt =
     discard p.consume(tkSemicolon, "Expect ';' after value.")
     result = newPrintStmt(val)
 
+# returns seq[Stmt] for functions
 proc blockStatement(p: var Parser): seq[Stmt] = 
     var statements: seq[Stmt]
 
@@ -144,21 +155,76 @@ proc blockStatement(p: var Parser): seq[Stmt] =
     discard p.consume(tkRightBrace, "Expect '}' after block.")
     return statements
 
-proc varDeclaration(p: var Parser): Stmt = 
-    let name = p.consume(tkIdentifier, "Expect variable name")
-    var initializer: Expr = nil
+proc ifStatement(p: var Parser): Stmt = 
+    discard p.consume(tkLeftParen, "Expect '(' after if.")
+    let condition = p.expression()
+    discard p.consume(tkRightParen, "Expect ')' after if condition")
 
-    if (p.match(tkEqual)):
-        initializer = p.expression()
+    var thenBranch = p.statement()
+    var elseBranch: Stmt = if p.match(tkElse): p.statement() else: nil
 
-    discard p.consume(tkSemicolon, "Expect ';' after variable declaration")
-    return newVarStmt(name, initializer)
+    result = newIfStmt(condition, thenBranch, elseBranch)
+
+proc whileStatement(p: var Parser): Stmt = 
+    discard p.consume(tkLeftParen, "Expect '(' after while.")
+    var condition = p.expression()
+    discard p.consume(tkRightParen, "Expect ')' after condition.")
+
+    let body = p.statement()
+
+    result = newWhileStmt(condition, body)
+
+proc forStatement(p: var Parser): Stmt = 
+    discard p.consume(tkLeftParen, "Expect '(' after for.")
+
+    var initializer: Stmt = nil
+    if (p.match(tkSemicolon)):
+        discard
+    elif (p.match(tkVar)):
+        initializer = p.varDeclaration()
+    else:
+        initializer = p.expressionStatement()
+
+    var condition = if (not p.check(tkSemicolon)): p.expression() else: nil
+    discard p.consume(tkSemicolon, "Expect ';' after loop condition.")
+
+    let increment = if not(p.check(tkRightParen)): p.expression() else: nil
+    discard p.consume(tkRightParen, "Expect ')' after for clauses.")
+
+    var body = p.statement()
+
+    if (increment != nil):
+        body = newBlockStmt(@[body, newExpressionStmt(increment)])
+
+    if (condition == nil): condition = newLiteral(initLiteral(true))
+    body = newWhileStmt(condition, body)
+
+    if (initializer != nil):
+        body = newBlockStmt(@[initializer, body])
+
+    result = body
+
+proc parseAnd(p: var Parser): Expr =
+    var ex = p.equality()
+    while p.match(tkAnd):
+        let op = p.previous()
+        let right = p.equality()
+        ex = newBinary(ex, op, right)
+    result = ex
+
+proc parseOr(p: var Parser): Expr =
+    var ex = p.parseAnd()
+    while p.match(tkOr):
+        let op = p.previous()
+        let right = p.parseAnd()
+        ex = newBinary(ex, op, right)
+    result = ex
 
 proc expression(p: var Parser): Expr = 
     result = p.assignment()
 
 proc assignment(p: var Parser): Expr = 
-    let ex = p.equality()
+    let ex = p.parseOr()
 
     if (p.match(tkEqual)):
         let equals = p.previous()
@@ -173,6 +239,9 @@ proc assignment(p: var Parser): Expr =
     result = ex
 
 proc statement(p: var Parser): Stmt =
+    if (p.match(tkIf)): return p.ifStatement()
+    if (p.match(tkWhile)): return p.whileStatement()
+    if (p.match(tkFor)): return p.forStatement()
     if (p.match(tkPrint)): return p.printStatement()
     if (p.match(tkLeftBrace)): return newBlockStmt(p.blockStatement())
 
