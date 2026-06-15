@@ -11,7 +11,7 @@ import ./interpreter
 import ./error
 
 # keywords that begin statements — skip expression fallback in REPL
-const statementKeywords = {tkVar, tkPrint, tkIf, tkWhile, tkFor, tkFun, tkClass, tkReturn}
+const statementKeywords = {tkVar, tkPrint, tkIf, tkWhile, tkFor, tkFun, tkClass, tkReturn, tkBreak}
 
 # Run application
 proc run(source: string, env: var Environment, isRepl: bool = false) = 

@@ -27,7 +27,8 @@ const keywords = {
     "this": tkThis,
     "true": tkTrue,
     "var": tkVar,
-    "while": tkWhile 
+    "while": tkWhile,
+    "break": tkBreak
 }.toTable()
 
 proc isAtEnd(s: Scanner): bool = 

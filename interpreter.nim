@@ -116,8 +116,13 @@ proc execute(st: Stmt, env: var Environment) =
         elif (st.elseBranch != nil):
             execute(st.elseBranch, env)
     of skWhile:
-        while (isTruthy(evaluate(st.con, env))):
-            execute(st.body, env)
+        try:
+            while (isTruthy(evaluate(st.con, env))):
+                execute(st.body, env)
+        except BreakException:
+            discard
+    of skBreak:
+        raise newException(BreakException, "")
          
 
 proc interpret*(statements: seq[Stmt], env: var Environment) = 

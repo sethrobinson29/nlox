@@ -3,7 +3,7 @@ import ./token
 
 type 
     StmtKind* = enum 
-        skExpression, skPrint, skVar, skBlock, skIf, skWhile
+        skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak
 
     Stmt* = ref object
         case kind*: StmtKind
@@ -23,6 +23,8 @@ type
         of skWhile:
             con*: Expr
             body*: Stmt
+        of skBreak:
+            discard
         
 
 proc newExpressionStmt*(ex: Expr): Stmt = 
@@ -42,3 +44,6 @@ proc newIfStmt*(condition: Expr, thenBranch: Stmt, elseBranch: Stmt): Stmt =
 
 proc newWhileStmt*(con: Expr, body: Stmt): Stmt = 
     Stmt(kind: skWhile, con: con, body: body)
+
+proc newBreakStmt*(): Stmt = 
+    Stmt(kind: skBreak)

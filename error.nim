@@ -5,6 +5,7 @@ type
     ParseError* = object of CatchableError 
     RuntimeError* = object of CatchableError
         token*: Token
+    BreakException* = object of CatchableError
 
 var hadError*: bool = false
 var hadRuntimeError*: bool = false

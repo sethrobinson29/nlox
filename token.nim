@@ -14,7 +14,7 @@ type
         # keywords
         tkAnd, tkClass, tkElse, tkFalse, tkFun, tkFor,
         tkIf, tkNil, tkOr, tkPrint, tkReturn, tkSuper,
-        tkThis, tkTrue, tkVar, tkWhile
+        tkThis, tkTrue, tkVar, tkWhile, tkBreak
 
         tkEof
     

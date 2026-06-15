@@ -7,6 +7,7 @@ type
     Parser* = object
         tokens*: seq[Token]
         current: int = 0
+        inLoop*: bool = false
 
 proc expression(p: var Parser): Expr
 proc assignment(p: var Parser): Expr
@@ -166,15 +167,29 @@ proc ifStatement(p: var Parser): Stmt =
     result = newIfStmt(condition, thenBranch, elseBranch)
 
 proc whileStatement(p: var Parser): Stmt = 
+    let prevInLoop = p.inLoop
+    p.inLoop = true
     discard p.consume(tkLeftParen, "Expect '(' after while.")
     var condition = p.expression()
     discard p.consume(tkRightParen, "Expect ')' after condition.")
 
     let body = p.statement()
 
+    p.inLoop = prevInLoop
     result = newWhileStmt(condition, body)
 
+proc breakStatement(p: var Parser): Stmt = 
+    if (not p.inLoop): 
+        loxError(p.previous(), "Cannot use 'break' outside of loop statement.")
+        discard p.consume(tkSemicolon, "Expect ';' after break.")
+        return newExpressionStmt(newLiteral(initLiteral()))
+
+    discard p.consume(tkSemicolon, "Expect ';' after break.")
+    result = newBreakStmt()
+
 proc forStatement(p: var Parser): Stmt = 
+    let prevInLoop = p.inLoop
+    p.inLoop = true
     discard p.consume(tkLeftParen, "Expect '(' after for.")
 
     var initializer: Stmt = nil
@@ -202,6 +217,7 @@ proc forStatement(p: var Parser): Stmt =
     if (initializer != nil):
         body = newBlockStmt(@[initializer, body])
 
+    p.inLoop = prevInLoop
     result = body
 
 proc parseAnd(p: var Parser): Expr =
@@ -241,6 +257,7 @@ proc assignment(p: var Parser): Expr =
 proc statement(p: var Parser): Stmt =
     if (p.match(tkIf)): return p.ifStatement()
     if (p.match(tkWhile)): return p.whileStatement()
+    if (p.match(tkBreak)): return p.breakStatement()
     if (p.match(tkFor)): return p.forStatement()
     if (p.match(tkPrint)): return p.printStatement()
     if (p.match(tkLeftBrace)): return newBlockStmt(p.blockStatement())
