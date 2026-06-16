@@ -23,5 +23,5 @@ proc newWhileStmt*(con: Expr, body: Stmt): Stmt =
 proc newBreakStmt*(): Stmt = 
     Stmt(kind: skBreak)
 
-proc newFunctionStmt(name: Token, params: seq[Token], body: seq[Stmt]): Stmt = 
+proc newFunctionStmt*(name: Token, params: seq[Token], body: seq[Stmt]): Stmt = 
     Stmt(kind: skFunction, funcName: name, params: params, funcBody: body)

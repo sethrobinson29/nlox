@@ -1,112 +1,74 @@
 # Java → Nim: Translation Notes for nlox
 
 Recurring differences between jlox (*Crafting Interpreters*, Java) and this
-Nim port. Helps explain why the structure diverges even when the logic is the
-same.
+Nim port. Quick-reference table below; deep dives for anything that needs
+more than a row.
 
-## No implicit `this`
+## Quick reference
 
-Java methods implicitly access `this`. Nim has no implicit receiver — every
-proc takes the object it operates on as an explicit first parameter:
-
-```nim
-proc advance(s: var Scanner): char =
-  result = s.source[s.current]
-  inc s.current
-```
-
-UFCS lets you *call* this as `s.advance()`, but the definition always has an
-explicit receiver — no `self`/`this` inside the body.
-
-**Effect:** when one private method calls another in the book, every call in
-the chain needs the object passed through explicitly.
-
-## `object` / `ref object` vs class
-
-Java only has classes. Nim splits this up:
-
-- **`object`** — value type (like a C struct), copied on assignment. Used for
-  `Token`, `Literal`, `Scanner`, `Parser`, `Environment`.
-- **`ref object`** — heap-allocated reference type. Used for `Expr`/`Stmt`
-  since AST nodes form a tree of pointers to each other.
-- **`ref object of RootObj`** — adds inheritance. **Not used here** (see
-  below).
-
-No "class" keyword, no constructors/methods bound to the type — procs are
-associated only by convention (same file, object as first param).
+| Java | Nim | Why |
+|---|---|---|
+| `this` (implicit) | explicit object as first param | no implicit receiver; `s.advance()` works via UFCS but the definition still takes `s` explicitly |
+| class | `object` (value) / `ref object` (reference) | Nim splits "class" into value vs. reference types; no inheritance unless `of RootObj` |
+| class hierarchy + visitor pattern | variant object (`case` in `object`) | Nim has sum types natively — see [Variant objects](#variant-objects-instead-of-inheritance--visitor) |
+| overloaded constructor | overload (when variants differ by arg type) or named constructor (when they don't) | see [Constructors](#named-constructors-instead-of-overloading) |
+| `Object` | `Literal` variant object | no universal value type in Nim — see [Object → Literal](#object--literal) |
+| `null` | `nil` (only for `ref` types) | `object` value types have no `nil` — see [null → nil](#null--nil-only-for-ref-types) |
+| `throw`/checked exceptions | `raise`/`object of CatchableError` | mostly direct; one notable divergence — see [Exceptions](#exceptions-error-returns-rather-than-throws) |
+| `LoxCallable` interface | variant `ref object` (`LoxFunction` with `lfLox`/`lfNative`) | rare case where a variant beats `case`-on-`Literal` — see [Callables](#callables-loxcallable--variant-loxfunction) |
+| `HashMap` | `Table` (value) / `TableRef` (reference) | Java's `Map` is always reference-typed; Nim splits it |
+| generated `.java` files via `GenerateAst.java` | hand-written variant objects | short enough to write directly, no codegen needed |
 
 ## Variant objects instead of inheritance + visitor
 
-The book's `Expr`/`Stmt` are class hierarchies (one subclass per node type),
-and operations over them (`AstPrinter`, `Interpreter`) use the **visitor
-pattern** — double dispatch via `accept()`/`visitXyz()` — to work around
-Java's lack of sum types.
+The book's `Expr`/`Stmt` are class hierarchies, and operations over them
+(`AstPrinter`, `Interpreter`) use the visitor pattern — double dispatch via
+`accept()`/`visitXyz()` — to work around Java's lack of sum types.
 
 Nim has sum types natively: variant objects (`case` inside an `object`). See
-the `Expr`/`ExprKind` definition in `exprsn.nim` and `Stmt`/`StmtKind` in
-`stmt.nim`.
-
-Any operation is one recursive proc with `case expr.kind` — no `accept`, no
+`Expr`/`ExprKind` in `exprsn.nim` and `Stmt`/`StmtKind` in `stmt.nim`. Any
+operation is one recursive proc with `case expr.kind` — no `accept`, no
 visitor interface, no `GenerateAst.java` step.
 
-**Effect:** a new `visitXyzExpr`/`visitXyzStmt` method in the book becomes a
-new `of ekXyz:`/`of skXyz:` branch in the relevant `case`.
+A new `visitXyzExpr`/`visitXyzStmt` method in the book becomes a new `of
+ekXyz:`/`of skXyz:` branch in the relevant `case`. Adding a variant makes
+every existing `case` over that enum non-exhaustive, forcing a new branch
+everywhere — a compiler-enforced checklist Java doesn't have.
 
-**Tradeoff:** all `of` branches share one field namespace. Fields that would
-be independently named in separate Java subclasses (`Unary.right` vs.
-`Binary.right`, `Expression.expression` vs. `Print.expression`) need distinct
-names across variants — `unaryRight`/`right`, `printExpr`/`expression`,
-`varExpr`/`expression`, etc. Main verbosity cost vs. inheritance, but
-compiler-enforced and arguably clearer at call sites.
+**Tradeoff:** all `of` branches share one field namespace, so fields that
+would be independently named in separate Java subclasses (`Unary.right` vs.
+`Binary.right`) need distinct names — `unaryRight`/`right`,
+`printExpr`/`expression`, etc.
 
-## Handling Precedence of Logical and Binary Expression
-
-Where the book splits `Logical` from `Binary` (to give `visitLogicalExpr` its own method), 
-Nim needs no separate variant — short-circuit behavior is handled inside the 
-`ekBinary` branch of evaluate by checking the operator type before evaluating both sides:
-
-```nim 
-of ekBinary:
-    if ex.operator.tkType == tkAnd:
-        let left = evaluate(ex.left, env)
-        if not isTruthy(left): return left
-        return evaluate(ex.right, env)
-    # ... rest of binary evaluation
-```
+Where the book splits `Logical` from `Binary` for its own visitor method, no
+separate variant is needed — short-circuiting is just a check inside the
+`ekBinary` branch of `evaluate` before evaluating both sides.
 
 ## Named constructors instead of overloading
 
-`Literal`'s variants are distinguished by *type* (`bool`/`float`/`string`), so
-one overloaded `initLiteral` works — Nim picks the variant from the argument
-type. See `initLiteral` overloads in `token.nim`.
-
-`Expr`/`Stmt` variants often share argument *types* (e.g. `skExpression` and
-`skPrint` both wrap an `Expr`), so overloading would be ambiguous. These get
-named constructors instead, one per variant — see `newBinary`, `newUnary`,
-etc. in `exprsn.nim` and `newExpressionStmt`/`newPrintStmt`/`newVarStmt` in
-`stmt.nim`.
+`Literal`'s variants are distinguished by type (`bool`/`float`/`string`), so
+one overloaded `initLiteral` works. `Expr`/`Stmt` variants often share
+argument types (`skExpression` and `skPrint` both wrap an `Expr`), so
+overloading would be ambiguous — these get named constructors instead
+(`newBinary`, `newPrintStmt`, etc.).
 
 ## `Object` → `Literal`
 
-Java uses `Object` (+ autoboxing) as the universal runtime value for Lox's
-dynamic typing. Nim equivalent is an explicit variant object — see
-`Literal`/`LiteralKind` in `token.nim`.
+Java uses `Object` (+ autoboxing) as the universal runtime value. Nim has no
+universal value type, so `Literal`/`LiteralKind` (`types.nim`) is an explicit
+variant object covering nil/bool/float/string, used for both token literals
+and runtime values.
 
-Used both for token literals (scanner output) and runtime values (`evaluate`
-result, `Environment` storage). Anywhere the book says `Object`, this codebase
-uses `Literal`.
-
-**Effect:** things Java gets free via inheritance (`equals()`, `toString()`,
+Things Java gets free via inheritance (`equals()`, `toString()`,
 `instanceof`) are hand-written `case`-based procs (`isEqual`, `$`,
-`isTruthy`), one branch per `LiteralKind`. More verbose, but
-exhaustiveness-checked.
+`isTruthy`) — more verbose, but exhaustiveness-checked.
 
 ## `null` → `nil`, only for `ref` types
 
 Nim's `nil` is only valid for `ref` types, not `object` value types.
 
-- `Literal` (`object`) — **no `nil` Literal**. Lox `nil` is
-  `Literal(kind: lkNil)`, via `initLiteral()`.
+- `Literal` (`object`) — no `nil` Literal. Lox `nil` is `Literal(kind:
+  lkNil)`, via `initLiteral()`.
 - `Expr`/`Stmt` (`ref object`) — `nil` works like Java's `null`, e.g. an
   absent `var` initializer:
 
@@ -116,95 +78,37 @@ Nim's `nil` is only valid for `ref` types, not `object` value types.
     initializer = p.expression()
   ```
 
-  Anything consuming such a field must check `!= nil` before recursing into
-  `evaluate`/`execute`, or it crashes (`FieldDefect`) — same risk as a missing
-  Java null-check, different failure shape.
-
 ## Exceptions: `error()` returns rather than throws
 
-The book's `Parser.error()` *returns* a `ParseError` rather than throwing,
-letting the caller decide whether to unwind. See `parseError` in
-`parser.nim`:
+The book's `Parser.error()` returns a `ParseError` rather than throwing,
+letting the caller decide whether to unwind:
 
 ```nim
 raise p.parseError("Expect expression.")        # unwind
 discard p.parseError("Some non-fatal issue.")   # report only, keep going
 ```
 
-`ParseError`/`RuntimeError` are `object of CatchableError` in `error.nim`,
-alongside `hadError`/`hadRuntimeError` flags and reporting procs (`loxReport`,
-`loxError`, `reportRuntimeError`). `RuntimeError` carries `token*: Token` (via
-`newRuntimeError`) for line-number reporting.
+`ParseError`/`RuntimeError` are `object of CatchableError` in `error.nim`.
+`RuntimeError` carries `token*: Token` (via `newRuntimeError`) for
+line-number reporting.
 
-A third variant — report without constructing/raising anything — shows up in
-`assignment()` (`parser.nim`) for the invalid-assignment-target case:
+A third variant — report without raising — shows up in `assignment()` for
+the invalid-assignment-target case: `loxError(Token, string)` reports and
+sets `hadError`, no exception involved.
 
-```nim
-if ex.kind == ekVar:
-  return newAssignment(ex.name, val)
+## Callables: `LoxCallable` → variant `LoxFunction`
 
-loxError(equals, "Invalid assignment target.")
-```
-
-`loxError(Token, string)` reports and sets `hadError`, returns nothing — no
-`raise`/`discard` needed.
-
-## Enums need exhaustive `case`
-
-Every `case` over `ExprKind`/`StmtKind`/etc. must cover every value (or use
-`else`). Adding a variant (`ekVar`, `skVar`, ...) makes every *existing*
-`case` over that enum non-exhaustive — AST printer, `evaluate`, `execute`, etc.
-all need a new branch, even a placeholder:
+The book uses a `LoxCallable` interface implemented by native functions and
+Lox-defined functions. Since both need to live under one `lkFunction`
+variant on `Literal` but carry different state, this is one of the few spots
+where a variant `ref object` is the better fit over `case`-on-`Literal`:
 
 ```nim
-of ekVar:
-  initLiteral()  # todo: environment lookup
+LoxFunction* = ref object
+  arity*: int
+  case kind*: LoxFunctionKind
+  of lfLox: declaration*: Stmt; closure*: Environment
+  of lfNative: nativeFn*: proc(args: seq[Literal]): Literal
 ```
 
-A compiler-enforced checklist with no Java equivalent (a missing
-`visitVariableExpr` override also wouldn't compile, but for a different
-reason — unimplemented abstract method).
-
-## Export markers (`*`)
-
-No `public`/`private`. Anything (type, proc, field, enum variant, `const`)
-private to its module unless suffixed `*`. No equivalent of `final` — a plain
-`object` is simply outside any inheritance hierarchy, same practical effect.
-
-- Enum **type** needs `*` (`TokenType*`); individual values don't.
-- Variant discriminator fields (`Literal.kind*`) need `*` if matched on from
-  another module.
-- `discard` branches (`of lkNil: discard`) aren't declarations, never take
-  `*`.
-
-## `var` and mutation
-
-Any proc that mutates fields through its object parameter needs `var T`, even
-for `ref object` — the reference itself isn't "enough." If a proc does
-`env.values[name] = value`, its `env` param needs `var Environment`, and that
-propagates up the whole call chain.
-
-Read-only (`peek`, `check`, `get`) — no `var`. Mutating (`advance`, `match`,
-`define`, `assign`) — `var`.
-
-This propagates to the original binding too. `Environment` is created once in
-`lox.nim` and threaded through `run` → `interpret` → `execute`/`evaluate`.
-Since that chain calls `define`/`assign`, the top-level binding must be `var`:
-
-```nim
-var env = Environment(values: initTable[string, Literal]())
-```
-
-A `let env = ...` only fails once something downstream tries to mutate it —
-the error surfaces at the call site needing `var`, not at the declaration.
-
-## `Table` construction: `initTable` vs `newTable`
-
-Java's `Map` is always reference-typed. `std/tables` splits this:
-
-- **`Table[K, V]`** — value type, via `initTable[K, V]()`. Used for
-  `Environment.values`.
-- **`TableRef[K, V]`** — reference type, via `newTable[K, V]()`.
-
-`newTable`/`TableRef` only needed if `values` itself had to be independently
-shared as a reference — not the case here.
+New native functions are just another proc matching `nativeFn`'s signature.

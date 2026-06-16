@@ -3,6 +3,12 @@ import ./environment
 import ./types
 import ./literal
 import ./error
+import ./function
+
+# global scope and definitions
+var globals = Environment(values: initTable[string, Literal](), enclosing: nil)
+
+globals.define("clock", initLiteral(initClock()))
 
 proc execute(st: Stmt, env: var Environment)
 

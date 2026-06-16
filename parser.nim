@@ -180,6 +180,26 @@ proc blockStatement(p: var Parser): seq[Stmt] =
     discard p.consume(tkRightBrace, "Expect '}' after block.")
     return statements
 
+proc function(p: var Parser, kind: string): Stmt = 
+    var name = p.consume(tkFun, "Expect " & kind & " name")
+
+    discard p.consume(tkLeftParen, "Expect '(' after " & kind & " name.")
+
+    var parameters: seq[Token] = @[]
+    if (not p.check(tkRightParen)):
+        if (parameters.len >= 255):
+            loxError(p.peek(), "Can't have more than 255 parameters.")
+            parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
+        while (p.match(tkComma)):
+            if (parameters.len >= 255):
+                loxError(p.peek(), "Can't have more than 255 parameters.")
+                parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
+
+    discard p.consume(tkRightParen, "Expect ')' after " & kind & " name.")
+    discard p.consume(tkLeftBrace, "Expect '{' before " & kind & " body.")
+    let body = p.blockStatement()
+    result = newFunctionStmt(name, parameters, body)
+
 proc ifStatement(p: var Parser): Stmt = 
     discard p.consume(tkLeftParen, "Expect '(' after if.")
     let condition = p.expression()
@@ -289,6 +309,7 @@ proc statement(p: var Parser): Stmt =
 
 proc declaration(p: var Parser): Stmt = 
     try:
+        if (p.match(tkFun)): return p.function("function")
         if (p.match(tkVar)): return p.varDeclaration()
 
         result = p.statement()

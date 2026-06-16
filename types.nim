@@ -98,10 +98,16 @@ type
         values*: Table[string, Literal]
         enclosing*: Environment
 
+    LoxFunctionKind* = enum lfLox, lfNative
+
     LoxFunction* = ref object
         arity*: int
-        declaration*: Stmt 
-        closure*: Environment
+        case kind*: LoxFunctionKind
+        of lfLox:
+            declaration*: Stmt 
+            closure*: Environment
+        of lfNative:
+            nativeFn*: proc(args: seq[Literal]): Literal
 
     LoxClass* = ref object
         arity*: int
