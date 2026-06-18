@@ -9,6 +9,7 @@ proc newGrouping*(ex: Expr): Expr = Expr(kind: ekGrouping, expression: ex)
 proc newVariable*(name: Token): Expr = Expr(kind: ekVar, name: name)
 proc newAssignment*(token: Token, ex: Expr): Expr = Expr(kind: ekAssign, token: token, assignExpr: ex)
 proc newCall*(callee: Expr, paren: Token, args: seq[Expr]): Expr = Expr(kind: ekCall, callee: callee, paren: paren, args: args)
+proc newAnonFunction*(params: seq[Token], body: seq[Stmt]): Expr = Expr(kind: ekFunction, params: params, body: body)
 
 proc `$`*(ex: Expr): string =
     if (ex == nil): return "nil"
@@ -19,4 +20,5 @@ proc `$`*(ex: Expr): string =
     of ekGrouping: "(group " & $ex.expression & ")"
     of ekVar: ex.name.lexeme
     of ekAssign: "(= " & ex.name.lexeme & " " & $ex.value & ")"
-    of ekCall: "func [" & $ex.callee & "] with args ( " & $ex.args & ") " # todo: may want to change
+    of ekCall: "func [" & $ex.callee & "] with args ( " & $ex.args & " )" 
+    of ekFunction: "anon func with args ( " & $ex.params & " )"

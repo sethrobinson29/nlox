@@ -14,6 +14,8 @@ proc expression(p: var Parser): Expr
 proc assignment(p: var Parser): Expr
 proc statement(p: var Parser): Stmt
 proc declaration(p: var Parser): Stmt
+proc function(p: var Parser, kind: string): Stmt
+proc anonFunction(p: var Parser): Expr
 proc parseError(p: var Parser, message: string): ref ParseError
 proc isAtEnd(p: var Parser): bool
 proc synchronize(p: var Parser)
@@ -64,6 +66,8 @@ proc primary(p: var Parser): Expr =
     if (p.match(tkNumber, tkString)): return newLiteral(p.previous().literal)
 
     if (p.match(tkIdentifier)): return newVariable(p.previous())
+
+    if (p.match(tkFun)): return p.anonFunction()
 
     if (p.match(tkLeftParen)):
         let ex = p.expression()
@@ -200,11 +204,27 @@ proc function(p: var Parser, kind: string): Stmt =
             if (parameters.len >= 255):
                 loxError(p.peek(), "Can't have more than 255 parameters.")
             parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
-
     discard p.consume(tkRightParen, "Expect ')' after " & kind & " name.")
     discard p.consume(tkLeftBrace, "Expect '{' before " & kind & " body.")
     let body = p.blockStatement()
     result = newFunctionStmt(name, parameters, body)
+
+proc anonFunction(p: var Parser): Expr = 
+    discard p.consume(tkLeftParen, "Expect ( before parameters")
+
+    var parameters: seq[Token] = @[]
+    if (not p.check(tkRightParen)):
+        if (parameters.len >= 255):
+            loxError(p.peek(), "Can't have more than 255 parameters.")
+        parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
+        while (p.match(tkComma)):
+            if (parameters.len >= 255):
+                loxError(p.peek(), "Can't have more than 255 parameters.")
+            parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
+    discard p.consume(tkRightParen, "Expect ')' after parameters")
+    discard p.consume(tkLeftBrace, "Expect '{' before body.")
+    let body = p.blockStatement()
+    result = newAnonFunction(parameters, body)
 
 proc ifStatement(p: var Parser): Stmt = 
     discard p.consume(tkLeftParen, "Expect '(' after if.")

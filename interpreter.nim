@@ -112,6 +112,9 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
             evaledArgs.add(evaluate(arg, env))
         
         call(callee, evaledArgs, env)
+    of ekFunction:
+        let tempStmt = Stmt(kind: skFunction, funcName: Token(tkType: tkFun, lexeme: "<anon>", line: 0), params: ex.params, funcBody: ex.body)
+        initLiteral(LoxFunction(arity: ex.params.len, kind: lfLox, declaration: tempStmt, closure: env))
 
 proc executeBlock(statements: seq[Stmt], env: var Environment) = 
     for statement in statements:
@@ -170,7 +173,6 @@ proc execute(st: Stmt, env: var Environment) =
         env.define(st.funcName.lexeme, initLiteral(fn))
     of skReturn:
         let val: Literal = if (st.value != nil): evaluate(st.value, env) else: initLiteral()
-        
         raise newReturnException(val)  
 
 proc interpret*(statements: seq[Stmt], env: var Environment) = 

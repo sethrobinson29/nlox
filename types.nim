@@ -41,7 +41,7 @@ type
         of lkInstance: instance*: LoxInstance
 
     ExprKind* = enum
-        ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar, ekAssign, ekCall
+        ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar, ekAssign, ekCall, ekFunction
 
     Expr* = ref object
         case kind*: ExprKind
@@ -65,6 +65,9 @@ type
             callee*: Expr
             paren*: Token
             args*: seq[Expr]
+        of ekFunction:
+            params*: seq[Token]
+            body*: seq[Stmt]
 
     StmtKind* = enum 
         skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak, skFunction, skReturn
