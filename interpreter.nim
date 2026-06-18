@@ -4,6 +4,7 @@ import ./types
 import ./literal
 import ./error
 import ./function
+import ./statement
 
 # global scope and definitions
 var globals = Environment(values: initTable[string, Literal](), enclosing: nil)
@@ -11,6 +12,7 @@ var globals = Environment(values: initTable[string, Literal](), enclosing: nil)
 globals.define("clock", initLiteral(initClock()))
 
 proc execute(st: Stmt, env: var Environment)
+proc call*(lit: Literal, args: seq[Literal], env: var Environment): Literal
 
 proc isTruthy(litr: Literal): bool = 
     case litr.kind:
@@ -105,12 +107,35 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
 
         if (ex.args.len != callee.arity()):
             raise newRuntimeError(ex.paren, "Expected " & $callee.arity() & " arguments but got " & $ex.args.len & ".")
-        # todo
-        initLiteral()
+        var evaledArgs: seq[Literal]
+        for arg in ex.args:
+            evaledArgs.add(evaluate(arg, env))
+        
+        call(callee, evaledArgs, env)
 
 proc executeBlock(statements: seq[Stmt], env: var Environment) = 
     for statement in statements:
         execute(statement, env)
+
+proc call*(lit: Literal, args: seq[Literal], env: var Environment): Literal =
+    case lit.kind:
+    of lkFunction:
+        let fn = lit.function
+        case fn.kind:
+        of lfNative:
+            result = fn.nativeFn(args)
+        of lfLox:
+            result = initLiteral() # handle functions without return statements
+            try:
+                var callEnv = Environment(enclosing: fn.closure, values: initTable[string, Literal]())
+                let params = fn.declaration.params
+                for i in 0..<params.len: 
+                    callEnv.define(params[i].lexeme, args[i])
+                executeBlock(fn.declaration.funcBody, callEnv)
+            except ReturnException as e:
+                result = e.value # actual return value
+    else:
+        result = initLiteral()
 
 proc execute(st: Stmt, env: var Environment) = 
     case st.kind:
@@ -141,8 +166,12 @@ proc execute(st: Stmt, env: var Environment) =
     of skBreak:
         raise newException(BreakException, "")
     of skFunction:
-        discard
-         
+        let fn = LoxFunction(arity: st.params.len, kind: lfLox, declaration: st, closure: env)
+        env.define(st.funcName.lexeme, initLiteral(fn))
+    of skReturn:
+        let val: Literal = if (st.value != nil): evaluate(st.value, env) else: initLiteral()
+        
+        raise newReturnException(val)  
 
 proc interpret*(statements: seq[Stmt], env: var Environment) = 
     try:

@@ -6,6 +6,8 @@ type
     RuntimeError* = object of CatchableError
         token*: Token
     BreakException* = object of CatchableError
+    ReturnException* = object of CatchableError
+        value*: Literal
 
 var hadError*: bool = false
 var hadRuntimeError*: bool = false
@@ -39,3 +41,8 @@ proc newRuntimeError*(token: Token, message: string): ref RuntimeError =
 proc reportRuntimeError*(error: ref RuntimeError) =
     echo error.msg & "\n[line " & $error.token.line & "]"
     hadRuntimeError = true
+
+# return excpetion
+proc newReturnException*(value: Literal): ref ReturnException =
+    result = newException(ReturnException, "")
+    result.value = value

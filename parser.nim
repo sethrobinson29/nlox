@@ -178,10 +178,16 @@ proc blockStatement(p: var Parser): seq[Stmt] =
         statements.add(p.declaration())
 
     discard p.consume(tkRightBrace, "Expect '}' after block.")
-    return statements
+    result = statements
+
+proc returnStatement(p: var Parser): Stmt = 
+    let keyword = p.previous()
+    var value: Expr = if (not p.check(tkSemicolon)): p.expression() else: nil
+    discard p.consume(tkSemicolon, "Expect ';' after return value.")
+    result = newReturnStmt(keyword, value)
 
 proc function(p: var Parser, kind: string): Stmt = 
-    var name = p.consume(tkFun, "Expect " & kind & " name")
+    var name = p.consume(tkIdentifier, "Expect " & kind & " name")
 
     discard p.consume(tkLeftParen, "Expect '(' after " & kind & " name.")
 
@@ -189,11 +195,11 @@ proc function(p: var Parser, kind: string): Stmt =
     if (not p.check(tkRightParen)):
         if (parameters.len >= 255):
             loxError(p.peek(), "Can't have more than 255 parameters.")
-            parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
+        parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
         while (p.match(tkComma)):
             if (parameters.len >= 255):
                 loxError(p.peek(), "Can't have more than 255 parameters.")
-                parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
+            parameters.add(p.consume(tkIdentifier, "Expect parameter name."))
 
     discard p.consume(tkRightParen, "Expect ')' after " & kind & " name.")
     discard p.consume(tkLeftBrace, "Expect '{' before " & kind & " body.")
@@ -303,6 +309,7 @@ proc statement(p: var Parser): Stmt =
     if (p.match(tkBreak)): return p.breakStatement()
     if (p.match(tkFor)): return p.forStatement()
     if (p.match(tkPrint)): return p.printStatement()
+    if (p.match(tkReturn)): return p.returnStatement()
     if (p.match(tkLeftBrace)): return newBlockStmt(p.blockStatement())
 
     result = p.expressionStatement()

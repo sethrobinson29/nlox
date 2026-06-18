@@ -20,8 +20,11 @@ proc newIfStmt*(condition: Expr, thenBranch: Stmt, elseBranch: Stmt): Stmt =
 proc newWhileStmt*(con: Expr, body: Stmt): Stmt = 
     Stmt(kind: skWhile, con: con, body: body)
 
-proc newBreakStmt*(): Stmt = 
-    Stmt(kind: skBreak)
-
 proc newFunctionStmt*(name: Token, params: seq[Token], body: seq[Stmt]): Stmt = 
     Stmt(kind: skFunction, funcName: name, params: params, funcBody: body)
+
+proc newReturnStmt*(keyword: Token, value: Expr): Stmt = 
+    Stmt(kind: skReturn, keyword: keyword, value: value)
+
+proc newBreakStmt*(): Stmt = 
+    Stmt(kind: skBreak)

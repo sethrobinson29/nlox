@@ -67,7 +67,7 @@ type
             args*: seq[Expr]
 
     StmtKind* = enum 
-        skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak, skFunction
+        skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak, skFunction, skReturn
 
     Stmt* = ref object
         case kind*: StmtKind
@@ -93,6 +93,9 @@ type
             funcName*: Token
             params*: seq[Token]
             funcBody*: seq[Stmt]
+        of skReturn:
+            keyword*: Token
+            value*: Expr
 
     Environment* = ref object
         values*: Table[string, Literal]
