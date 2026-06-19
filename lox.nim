@@ -41,11 +41,6 @@ proc run(source: string, env: var Environment, isRepl: bool = false) =
     if hadError: return
 
     interpret(statements, env)
-    # todo: remove debug outputs
-    # echo expression
-
-    # for token in tokens:
-    #     echo token
 
 proc runFile(path: string) =
     try:
