@@ -5,6 +5,7 @@ import ./types
 import ./statement
 import ./scanner
 import ./parser
+import ./resolver
 import ./interpreter
 import ./error
 
@@ -32,6 +33,11 @@ proc run(source: string, env: var Environment, isRepl: bool = false) =
     var parser = Parser(tokens: tokens)
     let statements = parser.parse()
 
+    if hadError: return
+
+    var resolver = Resolver(scopes: @[])
+    for s in statements:
+        resolver.resolveStmt(s)
     if hadError: return
 
     interpret(statements, env)

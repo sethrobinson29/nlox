@@ -95,10 +95,16 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
         of tkEqualEqual: initLiteral(isEqual(left, right))
         else: initLiteral()
     of ekVar:
-        env.get(ex.name)
+        if (ex.varDepth == -1):
+            env.get(ex.name)
+        else:
+            env.getAt(ex.varDepth, ex.name)
     of ekAssign:
         let val = evaluate(ex.assignExpr, env)
-        env.assign(ex.token, val)
+        if (ex.assignDepth == -1):
+            env.assign(ex.token, val)
+        else:
+            env.assignAt(ex.assignDepth, ex.token, val)
         val
     of ekCall:
         let callee = evaluate(ex.callee, env)

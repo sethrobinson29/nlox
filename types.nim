@@ -58,9 +58,11 @@ type
             expression*: Expr
         of ekVar:
             name*: Token
+            varDepth*: int = -1
         of ekAssign:
             token*: Token
             assignExpr*: Expr
+            assignDepth*: int = -1
         of ekCall:
             callee*: Expr
             paren*: Token
@@ -103,6 +105,12 @@ type
     Environment* = ref object
         values*: Table[string, Literal]
         enclosing*: Environment
+
+    FunctionType* = enum ftNone, ftFunction
+
+    Resolver* = object
+        scopes*: seq[Table[string, bool]]
+        currentFunction*: FunctionType
 
     LoxFunctionKind* = enum lfLox, lfNative
 

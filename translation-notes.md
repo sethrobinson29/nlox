@@ -18,6 +18,7 @@ more than a row.
 | `LoxCallable` interface | variant `ref object` (`LoxFunction` with `lfLox`/`lfNative`) | rare case where a variant beats `case`-on-`Literal` — see [Callables](#callables-loxcallable--variant-loxfunction) |
 | `HashMap` | `Table` (value) / `TableRef` (reference) | Java's `Map` is always reference-typed; Nim splits it |
 | generated `.java` files via `GenerateAst.java` | hand-written variant objects | short enough to write directly, no codegen needed |
+| `Resolver implements Expr.Visitor, Stmt.Visitor` | `resolveExpr`/`resolveStmt` procs on a `Resolver` object | same visitor-avoidance as the interpreter — see [Resolver](#resolver-no-visitor-depth-stored-on-the-node) |
 
 ## Variant objects instead of inheritance + visitor
 
@@ -112,3 +113,42 @@ LoxFunction* = ref object
 ```
 
 New native functions are just another proc matching `nativeFn`'s signature.
+
+## Resolver: no visitor, depth stored on the node
+
+Chapter 11's `Resolver` is, again, a Java `Visitor` — same pattern as
+`Interpreter`/`AstPrinter`, same fix: a `Resolver` object holding a scope
+stack (`scopes*: seq[Table[string, bool]]`), and `resolveExpr`/`resolveStmt`
+procs that `case` over `ExprKind`/`StmtKind` instead of implementing
+`visitXyz` methods.
+
+The bigger divergence is how resolved variable depth gets stored. The book
+keys a `Map<Expr, Integer>` on the `Interpreter` by `Expr` object identity.
+Nim's `Table` needs `==`/`hash` on the key type, and reference-identity
+hashing isn't worth fighting for — so depth is stored directly as a field on
+the relevant `Expr` variants instead:
+
+```nim
+of ekVar:
+  name*: Token
+  varDepth*: int = -1
+of ekAssign:
+  token*: Token
+  assignExpr*: Expr
+  assignDepth*: int = -1
+```
+
+`-1` is the sentinel for "not resolved locally" (a global). `resolveLocal`
+walks the scope stack from innermost out and sets the field directly on the
+`ref object` node — no side table needed. `evaluate` then branches on the
+sentinel:
+
+```nim
+of ekVar:
+  if ex.varDepth == -1: env.get(ex.name)
+  else: env.getAt(ex.varDepth, ex.name)
+```
+
+`Environment` gains `getAt`/`assignAt`, which walk `enclosing` exactly
+`depth` times rather than searching outward until found — the resolved depth
+replaces the dynamic search entirely for locals.
