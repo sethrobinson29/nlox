@@ -38,7 +38,7 @@ Nim — developed on 2.2.x. Earlier versions may work but are untested.
 
 ## Translation Notes
 
-Following along with the book in Java? See [JAVA_TO_NIM.md](JAVA_TO_NIM.md)
+Following along with the book in Java? See [translation-notes.md](translation-notes.md)
 for a breakdown of where and why this implementation diverges from the Java
 reference.
 
