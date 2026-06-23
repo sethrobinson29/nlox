@@ -177,6 +177,14 @@ proc execute(st: Stmt, env: var Environment) =
     of skFunction:
         let fn = LoxFunction(arity: st.params.len, kind: lfLox, declaration: st, closure: env)
         env.define(st.funcName.lexeme, initLiteral(fn))
+    of skClass:
+        env.define(st.className.lexeme, initLiteral())
+        var methods = initTable[string, LoxFunction]()
+        for m in st.methods:
+            let fn = LoxFunction(arity: m.params.len, kind: lfLox, declaration: m, closure: env)
+            methods[m.funcName.lexeme] = fn
+        let cls = LoxClass(arity: 0, name: st.className.lexeme, methods: methods)
+        env.assign(st.className, initLiteral(cls))
     of skReturn:
         let val: Literal = if (st.value != nil): evaluate(st.value, env) else: initLiteral()
         raise newReturnException(val)  

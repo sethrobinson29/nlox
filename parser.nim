@@ -190,6 +190,18 @@ proc returnStatement(p: var Parser): Stmt =
     discard p.consume(tkSemicolon, "Expect ';' after return value.")
     result = newReturnStmt(keyword, value)
 
+proc classDeclaration(p: var Parser): Stmt = 
+    let name = p.consume(tkIdentifier, "Expect class name.")
+    discard p.consume(tkLeftBrace, "Expect '{' before class body.")
+
+    var methods: seq[Stmt] = @[]
+    while (not p.check(tkRightBrace) and not p.isAtEnd()):
+        methods.add(p.function("method"))
+
+    discard p.consume(tkRightBrace, "Expect '}' after class body.")
+
+    result = newClassStmt(name, methods)
+
 proc function(p: var Parser, kind: string): Stmt = 
     var name = p.consume(tkIdentifier, "Expect " & kind & " name")
 
@@ -336,6 +348,7 @@ proc statement(p: var Parser): Stmt =
 
 proc declaration(p: var Parser): Stmt = 
     try:
+        if (p.match(tkClass)): return p.classDeclaration()
         if (p.match(tkFun)): return p.function("function")
         if (p.match(tkVar)): return p.varDeclaration()
 

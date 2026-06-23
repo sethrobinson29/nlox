@@ -72,7 +72,7 @@ type
             body*: seq[Stmt]
 
     StmtKind* = enum 
-        skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak, skFunction, skReturn
+        skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak, skFunction, skReturn, skClass
 
     Stmt* = ref object
         case kind*: StmtKind
@@ -98,6 +98,9 @@ type
             funcName*: Token
             params*: seq[Token]
             funcBody*: seq[Stmt]
+        of skClass:
+            className*: Token
+            methods*: seq[Stmt]
         of skReturn:
             keyword*: Token
             value*: Expr
@@ -126,9 +129,9 @@ type
     LoxClass* = ref object
         arity*: int
         name*: string
-        # methods etc later
+        methods*: Table[string, LoxFunction]
 
     LoxInstance* = ref object
         arity*: int
-        klass*: LoxClass
+        class*: LoxClass
         fields*: Table[string, Literal]

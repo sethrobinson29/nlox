@@ -1,11 +1,13 @@
 # literal functionality
 import ./types
+import ./loxclass
 
 # Literal constructors
 proc initLiteral*(s: string): Literal = Literal(kind: lkString, strVal: s)
 proc initLiteral*(b: bool): Literal = Literal(kind: lkBool, boolVal: b)
 proc initLiteral*(f: float): Literal = Literal(kind: lkFloat, floatVal: f)
 proc initLiteral*(fn: LoxFunction): Literal = Literal(kind: lkFunction, function: fn)
+proc initLiteral*(cls: LoxClass): Literal = Literal(kind: lkClass, cls: cls)
 proc initLiteral*(): Literal = Literal(kind: lkNil)
 
 # Literals to string
@@ -24,7 +26,8 @@ proc `$`*(lit: Literal): string =
         case lit.function.kind:
             of lfNative: "<native fn>"
             of lfLox: "<f" & lit.function.declaration.funcName.lexeme & ">"
-
+    of lkClass:
+        $cls.name
     else:
         # todo
         ""

@@ -108,5 +108,9 @@ proc resolveStmt*(r: var Resolver, st: Stmt) =
             loxError(st.keyword, "Can't return from top-level code.")
         if st.value != nil:
             resolveExpr(r, st.value)
+    of skClass:
+        # todo: temp
+        declare(r, st.className)
+        define(r, st.className)
     of skBreak:
         discard

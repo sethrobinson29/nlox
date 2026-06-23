@@ -1,7 +1,7 @@
 # function functionality
 import std/times
 import ./types
-import./literal
+import ./literal
 
 # native functions
 proc clockNative(args: seq[Literal]): Literal =
