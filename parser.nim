@@ -64,7 +64,7 @@ proc primary(p: var Parser): Expr =
     if (p.match(tkNil)): return newLiteral(initLiteral())
 
     if (p.match(tkNumber, tkString)): return newLiteral(p.previous().literal)
-
+    if (p.match(tkThis)): return newThis(p.previous())
     if (p.match(tkIdentifier)): return newVariable(p.previous())
 
     if (p.match(tkFun)): return p.anonFunction()

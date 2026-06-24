@@ -41,7 +41,7 @@ type
         of lkInstance: instance*: LoxInstance
 
     ExprKind* = enum
-        ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar, ekAssign, ekCall, ekFunction, ekGetProp, ekSetProp
+        ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar, ekAssign, ekCall, ekFunction, ekGetProp, ekSetProp, ekThis
 
     Expr* = ref object
         case kind*: ExprKind
@@ -77,6 +77,9 @@ type
             setPropObj*: Expr
             setPropName*: Token
             setPropVal*: Expr
+        of ekThis:
+            thisKeyword*: Token
+            thisDepth*: int = -1
 
     StmtKind* = enum 
         skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak, skFunction, skReturn, skClass
@@ -117,10 +120,12 @@ type
         enclosing*: Environment
 
     FunctionType* = enum ftNone, ftFunction, ftMethod
+    ClassType* = enum ctNone, ctClass
 
     Resolver* = object
         scopes*: seq[Table[string, bool]]
         currentFunction*: FunctionType
+        currentClass*: ClassType
 
     LoxFunctionKind* = enum lfLox, lfNative
 
@@ -132,6 +137,8 @@ type
             closure*: Environment
         of lfNative:
             nativeFn*: proc(args: seq[Literal]): Literal
+
+    
 
     LoxClass* = ref object
         arity*: int

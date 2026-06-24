@@ -137,6 +137,11 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
 
         obj.instance.set(ex.setPropName, val)
         val
+    of ekThis:
+        if ex.thisDepth == -1:
+            env.get(ex.thisKeyword)
+        else:
+            env.getAt(ex.thisDepth, ex.thisKeyword)
 
 
 proc executeBlock(statements: seq[Stmt], env: var Environment) = 

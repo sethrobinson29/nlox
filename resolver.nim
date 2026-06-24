@@ -34,6 +34,8 @@ proc resolveLocal*(r: var Resolver, ex: Expr, name: Token) =
                 ex.varDepth = depth
             of ekAssign:
                 ex.assignDepth = depth
+            of ekThis:
+                ex.thisDepth = depth
             else:
                 discard
             return 
@@ -65,6 +67,11 @@ proc resolveExpr*(r: var Resolver, ex: Expr) =
     of ekSetProp:
         r.resolveExpr(ex.setPropVal)
         r.resolveExpr(ex.setPropObj)
+    of ekThis:
+        if (r.currentClass == ctNone): 
+            loxError(ex.thisKeyword, "Can't use 'this' outside of a class.")
+            return
+        r.resolveLocal(ex, ex.thisKeyword)
 
 proc resolveFunction*(r: var Resolver, params: seq[Token], body: seq[Stmt], fnType: FunctionType) =
     let enclosingFunction = r.currentFunction
@@ -113,10 +120,18 @@ proc resolveStmt*(r: var Resolver, st: Stmt) =
         if st.value != nil:
             r.resolveExpr(st.value)
     of skClass:
+        let enclosingClass = r.currentClass
+        r.currentClass = ctClass
         r.declare(st.className)
         r.define(st.className)
 
+        r.beginScope()
+        r.scopes[^1]["this"] = true
+
         for m in st.methods:
             r.resolveFunction(m.params, m.funcBody, ftMethod)
+        
+        r.endScope()
+        r.currentClass = enclosingClass
     of skBreak:
         discard
