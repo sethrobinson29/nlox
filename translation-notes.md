@@ -45,6 +45,8 @@ Where the book splits `Logical` from `Binary` for its own visitor method, no
 separate variant is needed — short-circuiting is just a check inside the
 `ekBinary` branch of `evaluate` before evaluating both sides.
 
+In hindsight: the field namespace constraint becomes meaningfully painful at the scale of Lox's full AST (~15+ node types). For a smaller AST the variant object tradeoff clearly favors Nim — less boilerplate, no visitor infrastructure. For a language this size, ref object inheritance (which Nim supports) would have given each node type its own independent field namespace, at the cost of bringing back some visitor-style dispatch. Notably, the Nim compiler itself uses ref object inheritance for its own AST for exactly this reason. The variant object approach is the right default for small-to-medium sum types; for a full language AST, inheritance is worth considering.
+
 ## Named constructors instead of overloading
 
 `Literal`'s variants are distinguished by type (`bool`/`float`/`string`), so

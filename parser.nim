@@ -71,7 +71,7 @@ proc primary(p: var Parser): Expr =
 
     if (p.match(tkLeftParen)):
         let ex = p.expression()
-        discard p.consume(tkRightParen, "Except ')' after expression.")
+        discard p.consume(tkRightParen, "Expect ')' after expression.")
         return newGrouping(ex)
 
     raise p.parseError("Expect expression")
@@ -94,6 +94,9 @@ proc call(p: var Parser): Expr =
     while (true):
         if (p.match(tkLeftParen)):
             ex = p.finishCall(ex)
+        elif (p.match(tkDot)):
+            let name = p.consume(tkIdentifier, "Expect property name after '.'.")
+            ex = newGetProp(ex, name)
         else:
             break;
     
@@ -330,6 +333,8 @@ proc assignment(p: var Parser): Expr =
         if (ex.kind == ekVar):
             let token = ex.name
             return newAssignment(token, val)
+        elif (ex.kind == ekGetProp):
+            return newSetProp(ex.getPropObj, ex.getPropName, val)
 
         loxError(equals, "Invalid assignment target.")
 

@@ -5,6 +5,7 @@ import ./literal
 import ./error
 import ./function
 import ./statement
+import ./loxclass
 
 # global scope and definitions
 var globals = Environment(values: initTable[string, Literal](), enclosing: nil)
@@ -121,6 +122,22 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
     of ekFunction:
         let tempStmt = Stmt(kind: skFunction, funcName: Token(tkType: tkFun, lexeme: "<anon>", line: 0), params: ex.params, funcBody: ex.body)
         initLiteral(LoxFunction(arity: ex.params.len, kind: lfLox, declaration: tempStmt, closure: env))
+    of ekGetProp:
+        var obj = evaluate(ex.getPropObj, env)
+        if (obj.kind == lkInstance):
+            obj.instance.get(ex.getPropName)
+        else:
+            raise newRuntimeError(ex.getPropName, "Only instances have properties.")
+    of ekSetProp:
+        var obj = evaluate(ex.setPropObj, env)
+        if (obj.kind != lkInstance):
+            raise newRuntimeError(ex.setPropName, "Only instances have fields.")
+
+        let val = evaluate(ex.setPropVal, env)
+
+        obj.instance.set(ex.setPropName, val)
+        val
+
 
 proc executeBlock(statements: seq[Stmt], env: var Environment) = 
     for statement in statements:
@@ -143,6 +160,9 @@ proc call*(lit: Literal, args: seq[Literal], env: var Environment): Literal =
                 executeBlock(fn.declaration.funcBody, callEnv)
             except ReturnException as e:
                 result = e.value # actual return value
+    of lkClass:
+        # todo: probably need to populate fields
+        result = initLiteral(LoxInstance(arity: 0, cls: lit.cls, fields: initTable[string, Literal]()))
     else:
         result = initLiteral()
 

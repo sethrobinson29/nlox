@@ -41,7 +41,7 @@ type
         of lkInstance: instance*: LoxInstance
 
     ExprKind* = enum
-        ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar, ekAssign, ekCall, ekFunction
+        ekBinary, ekUnary, ekLiteral, ekGrouping, ekVar, ekAssign, ekCall, ekFunction, ekGetProp, ekSetProp
 
     Expr* = ref object
         case kind*: ExprKind
@@ -70,6 +70,13 @@ type
         of ekFunction:
             params*: seq[Token]
             body*: seq[Stmt]
+        of ekGetProp:
+            getPropObj*: Expr
+            getPropName*: Token
+        of ekSetProp:
+            setPropObj*: Expr
+            setPropName*: Token
+            setPropVal*: Expr
 
     StmtKind* = enum 
         skExpression, skPrint, skVar, skBlock, skIf, skWhile, skBreak, skFunction, skReturn, skClass
@@ -109,7 +116,7 @@ type
         values*: Table[string, Literal]
         enclosing*: Environment
 
-    FunctionType* = enum ftNone, ftFunction
+    FunctionType* = enum ftNone, ftFunction, ftMethod
 
     Resolver* = object
         scopes*: seq[Table[string, bool]]
@@ -133,5 +140,5 @@ type
 
     LoxInstance* = ref object
         arity*: int
-        class*: LoxClass
+        cls*: LoxClass
         fields*: Table[string, Literal]

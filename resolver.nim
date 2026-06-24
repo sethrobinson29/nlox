@@ -3,7 +3,7 @@ import ./types
 import ./error
 
 proc resolveStmt*(r: var Resolver, st: Stmt)
-proc resolveFunction*(r: var Resolver, params: seq[Token], body: seq[Stmt])
+proc resolveFunction*(r: var Resolver, params: seq[Token], body: seq[Stmt], fnType: FunctionType)
 
 # stack operations
 proc beginScope*(r: var Resolver) = 
@@ -41,76 +41,82 @@ proc resolveLocal*(r: var Resolver, ex: Expr, name: Token) =
 proc resolveExpr*(r: var Resolver, ex: Expr) =
     case ex.kind:
     of ekVar:
-        resolveLocal(r, ex, ex.name)
+        r.resolveLocal(ex, ex.name)
     of ekAssign:
-        resolveExpr(r, ex.assignExpr)
-        resolveLocal(r, ex, ex.token)
+        r.resolveExpr(ex.assignExpr)
+        r.resolveLocal(ex, ex.token)
     of ekBinary:
-        resolveExpr(r, ex.left)
-        resolveExpr(r, ex.right)
+        r.resolveExpr(ex.left)
+        r.resolveExpr(ex.right)
     of ekUnary:
-        resolveExpr(r, ex.unaryRight)
+        r.resolveExpr(ex.unaryRight)
     of ekGrouping:
-        resolveExpr(r, ex.expression)
+        r.resolveExpr(ex.expression)
     of ekLiteral:
         discard
     of ekCall:
-        resolveExpr(r, ex.callee)
+        r.resolveExpr(ex.callee)
         for arg in ex.args:
-            resolveExpr(r, arg)
+            r.resolveExpr(arg)
     of ekFunction:
-        resolveFunction(r, ex.params, ex.body)
-        discard
+        r.resolveFunction(ex.params, ex.body, ftFunction)
+    of ekGetProp:
+        r.resolveExpr(ex.getPropObj)
+    of ekSetProp:
+        r.resolveExpr(ex.setPropVal)
+        r.resolveExpr(ex.setPropObj)
 
-proc resolveFunction*(r: var Resolver, params: seq[Token], body: seq[Stmt]) =
+proc resolveFunction*(r: var Resolver, params: seq[Token], body: seq[Stmt], fnType: FunctionType) =
     let enclosingFunction = r.currentFunction
-    r.currentFunction = ftFunction
-    beginScope(r)
+    r.currentFunction = fnType
+    r.beginScope()
     for param in params:
-        declare(r, param)
-        define(r, param)
+        r.declare(param)
+        r.define(param)
     for bodyStmt in body:
-        resolveStmt(r, bodyStmt)
-    endScope(r)
+        r.resolveStmt(bodyStmt)
+    r.endScope()
     r.currentFunction = enclosingFunction
 
 
 proc resolveStmt*(r: var Resolver, st: Stmt) =
     case st.kind:
     of skBlock:
-        beginScope(r)
+        r.beginScope()
         for stmt in st.statements:
             resolveStmt(r, stmt)
-        endScope(r)
+        r.endScope()
     of skVar:
-        declare(r, st.name)
+        r.declare(st.name)
         if st.varExpr != nil:
-            resolveExpr(r, st.varExpr)
-        define(r, st.name)
+            r.resolveExpr(st.varExpr)
+        r.define(st.name)
     of skFunction:
-        declare(r, st.funcName)
-        define(r, st.funcName)
-        resolveFunction(r, st.params, st.funcBody)
+        r.declare(st.funcName)
+        r.define(st.funcName)
+        r.resolveFunction(st.params, st.funcBody, ftFunction)
     of skExpression:
-        resolveExpr(r, st.expression)
+        r.resolveExpr(st.expression)
     of skPrint:
-        resolveExpr(r, st.printExpr)
+        r.resolveExpr(st.printExpr)
     of skIf:
-        resolveExpr(r, st.condition)
-        resolveStmt(r, st.thenBranch)
+        r.resolveExpr(st.condition)
+        r.resolveStmt(st.thenBranch)
         if st.elseBranch != nil:
-            resolveStmt(r, st.elseBranch)
+            r.resolveStmt(st.elseBranch)
     of skWhile:
-        resolveExpr(r, st.con)
-        resolveStmt(r, st.body)
+        r.resolveExpr(st.con)
+        r.resolveStmt(st.body)
     of skReturn:
         if r.currentFunction == ftNone:
             loxError(st.keyword, "Can't return from top-level code.")
         if st.value != nil:
-            resolveExpr(r, st.value)
+            r.resolveExpr(st.value)
     of skClass:
-        # todo: temp
-        declare(r, st.className)
-        define(r, st.className)
+        r.declare(st.className)
+        r.define(st.className)
+
+        for m in st.methods:
+            r.resolveFunction(m.params, m.funcBody, ftMethod)
     of skBreak:
         discard

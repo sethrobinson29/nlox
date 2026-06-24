@@ -1,1 +1,20 @@
+import std/tables
 import ./types
+import ./error
+import ./literal
+
+# class procs
+proc findMethod(cls: LoxClass, name: string): LoxFunction = 
+    result = if (cls.methods.hasKey(name)): cls.methods[name] else: nil
+
+# instance procs
+proc get*(inst: LoxInstance, name: Token): Literal = 
+    if (inst.fields.hasKey(name.lexeme)):
+        return inst.fields[name.lexeme]
+    let mthd = inst.cls.findMethod(name.lexeme)
+    if (mthd != nil):
+        return initLiteral(mthd)
+    raise newRuntimeError(name, "Undefined property '" & name.lexeme & "'.")
+
+proc set*(inst: LoxInstance, name: Token, value: Literal) =
+    inst.fields[name.lexeme] = value
