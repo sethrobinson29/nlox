@@ -33,10 +33,3 @@ proc `$`*(lit: Literal): string =
 
 proc tkToString*(token: Token): string = 
     result = $token.tkType & " " & token.lexeme & " " & $token.literal
-
-# function/class procs
-proc arity*(lit: Literal): int =
-    case lit.kind:
-    of lkFunction: lit.function.arity
-    of lkClass: 0  # todo: init method later
-    else: 0

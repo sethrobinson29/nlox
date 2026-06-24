@@ -21,6 +21,15 @@ proc isTruthy(litr: Literal): bool =
     of lkBool: litr.boolVal
     else: true
 
+proc arity*(lit: Literal): int =
+    case lit.kind:
+    of lkFunction: lit.function.arity
+    of lkClass: 
+        let initializer = lit.cls.findMethod("init")
+        if initializer == nil: 0
+        else: initializer.arity
+    else: 0
+
 proc isEqual(left, right: Literal): bool = 
     if left.kind != right.kind: return false
     case left.kind:
@@ -163,11 +172,18 @@ proc call*(lit: Literal, args: seq[Literal], env: var Environment): Literal =
                 for i in 0..<params.len: 
                     callEnv.define(params[i].lexeme, args[i])
                 executeBlock(fn.declaration.funcBody, callEnv)
+                if fn.isInitializer:
+                    result = fn.closure.getAt(0, Token(tkType: tkThis, lexeme: "this", line: 0))
             except ReturnException as e:
-                result = e.value # actual return value
+                result = if fn.isInitializer: fn.closure.getAt(0, Token(tkType: tkThis, lexeme: "this", line: 0)) else: e.value
+                
     of lkClass:
-        # todo: probably need to populate fields
-        result = initLiteral(LoxInstance(arity: 0, cls: lit.cls, fields: initTable[string, Literal]()))
+        let inst = LoxInstance(arity: 0, cls: lit.cls, fields: initTable[string, Literal]())
+        let initializer = lit.cls.findMethod("init")
+        if (initializer != nil):
+            let bound = inst.bindInstance(initializer)
+            discard call(initLiteral(bound), args, env)
+        result = initLiteral(inst)
     else:
         result = initLiteral()
 
@@ -206,7 +222,8 @@ proc execute(st: Stmt, env: var Environment) =
         env.define(st.className.lexeme, initLiteral())
         var methods = initTable[string, LoxFunction]()
         for m in st.methods:
-            let fn = LoxFunction(arity: m.params.len, kind: lfLox, declaration: m, closure: env)
+            let isInit = m.funcName.lexeme == "init"
+            let fn = LoxFunction(arity: m.params.len, kind: lfLox, declaration: m, closure: env, isInitializer: isInit)
             methods[m.funcName.lexeme] = fn
         let cls = LoxClass(arity: 0, name: st.className.lexeme, methods: methods)
         env.assign(st.className, initLiteral(cls))

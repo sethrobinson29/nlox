@@ -119,7 +119,7 @@ type
         values*: Table[string, Literal]
         enclosing*: Environment
 
-    FunctionType* = enum ftNone, ftFunction, ftMethod
+    FunctionType* = enum ftNone, ftFunction, ftMethod, ftInitializer
     ClassType* = enum ctNone, ctClass
 
     Resolver* = object
@@ -135,6 +135,7 @@ type
         of lfLox:
             declaration*: Stmt 
             closure*: Environment
+            isInitializer*: bool = false
         of lfNative:
             nativeFn*: proc(args: seq[Literal]): Literal
 

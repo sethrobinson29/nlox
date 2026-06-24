@@ -4,10 +4,10 @@ import ./error
 import ./literal
 import ./environment
 
-proc bindInstance(inst: LoxInstance, mthd: LoxFunction): LoxFunction
+proc bindInstance*(inst: LoxInstance, mthd: LoxFunction): LoxFunction
 
 # class procs
-proc findMethod(cls: LoxClass, name: string): LoxFunction = 
+proc findMethod*(cls: LoxClass, name: string): LoxFunction = 
     result = if (cls.methods.hasKey(name)): cls.methods[name] else: nil
 
 # instance procs
@@ -22,7 +22,7 @@ proc get*(inst: LoxInstance, name: Token): Literal =
 proc set*(inst: LoxInstance, name: Token, value: Literal) =
     inst.fields[name.lexeme] = value
 
-proc bindInstance(inst: LoxInstance, mthd: LoxFunction): LoxFunction = 
+proc bindInstance*(inst: LoxInstance, mthd: LoxFunction): LoxFunction = 
     var env = Environment(enclosing: mthd.closure, values: initTable[string, Literal]())
     env.define("this", initLiteral(inst))
     LoxFunction(arity: mthd.arity, kind: lfLox, declaration: mthd.declaration, closure: env) 

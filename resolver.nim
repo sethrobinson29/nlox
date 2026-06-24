@@ -118,6 +118,8 @@ proc resolveStmt*(r: var Resolver, st: Stmt) =
         if r.currentFunction == ftNone:
             loxError(st.keyword, "Can't return from top-level code.")
         if st.value != nil:
+            if r.currentFunction == ftInitializer:
+                loxError(st.keyword, "Can't return a value from an initializer.")
             r.resolveExpr(st.value)
     of skClass:
         let enclosingClass = r.currentClass
@@ -129,7 +131,8 @@ proc resolveStmt*(r: var Resolver, st: Stmt) =
         r.scopes[^1]["this"] = true
 
         for m in st.methods:
-            r.resolveFunction(m.params, m.funcBody, ftMethod)
+            let fnType = if m.funcName.lexeme == "init": ftInitializer else: ftMethod
+            r.resolveFunction(m.params, m.funcBody, fnType)
         
         r.endScope()
         r.currentClass = enclosingClass
