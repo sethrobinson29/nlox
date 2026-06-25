@@ -23,8 +23,8 @@ proc newWhileStmt*(con: Expr, body: Stmt): Stmt =
 proc newFunctionStmt*(name: Token, params: seq[Token], body: seq[Stmt]): Stmt = 
     Stmt(kind: skFunction, funcName: name, params: params, funcBody: body)
 
-proc newClassStmt*(name: Token, methods: seq[Stmt]): Stmt = 
-    Stmt(kind: skClass, className: name, methods: methods)
+proc newClassStmt*(name: Token, superClass: Expr, methods: seq[Stmt]): Stmt = 
+    Stmt(kind: skClass, className: name, superClass: superClass, methods: methods)
 
 proc newReturnStmt*(keyword: Token, value: Expr): Stmt = 
     Stmt(kind: skReturn, keyword: keyword, value: value)

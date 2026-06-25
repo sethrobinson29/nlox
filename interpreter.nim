@@ -4,7 +4,6 @@ import ./types
 import ./literal
 import ./error
 import ./function
-import ./statement
 import ./loxclass
 
 # global scope and definitions
@@ -146,6 +145,13 @@ proc evaluate*(ex: Expr, env: var Environment): Literal =
 
         obj.instance.set(ex.setPropName, val)
         val
+    of ekSuper:
+        let superClass = env.getAt(ex.superDepth, ex.superKeyword)
+        let obj = env.getAt(ex.superDepth - 1, Token(tkType: tkThis, lexeme: "this", line: 0))
+        let mthd = superClass.cls.findMethod(ex.superMethod.lexeme)
+        if mthd == nil:
+            raise newRuntimeError(ex.superMethod, "Undefined property '" & ex.superMethod.lexeme & "'.")
+        initLiteral(obj.instance.bindInstance(mthd))
     of ekThis:
         if ex.thisDepth == -1:
             env.get(ex.thisKeyword)
@@ -219,13 +225,23 @@ proc execute(st: Stmt, env: var Environment) =
         let fn = LoxFunction(arity: st.params.len, kind: lfLox, declaration: st, closure: env)
         env.define(st.funcName.lexeme, initLiteral(fn))
     of skClass:
+        var superClass: Literal = initLiteral()
+        var methodEnv = env
+        if (st.superClass != nil):
+            superClass = evaluate(st.superClass, env)
+            if (superClass.kind != lkClass):
+                raise newRuntimeError(st.superClass.name, "Superclass must be a class.")
+            methodEnv = Environment(enclosing: env, values: initTable[string, Literal]())
+            methodEnv.define("super", superClass)
+
+
         env.define(st.className.lexeme, initLiteral())
         var methods = initTable[string, LoxFunction]()
         for m in st.methods:
             let isInit = m.funcName.lexeme == "init"
-            let fn = LoxFunction(arity: m.params.len, kind: lfLox, declaration: m, closure: env, isInitializer: isInit)
+            let fn = LoxFunction(arity: m.params.len, kind: lfLox, declaration: m, closure: methodEnv, isInitializer: isInit)
             methods[m.funcName.lexeme] = fn
-        let cls = LoxClass(arity: 0, name: st.className.lexeme, methods: methods)
+        let cls = LoxClass(arity: 0, name: st.className.lexeme, superClass: superClass, methods: methods)
         env.assign(st.className, initLiteral(cls))
     of skReturn:
         let val: Literal = if (st.value != nil): evaluate(st.value, env) else: initLiteral()

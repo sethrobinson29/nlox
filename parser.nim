@@ -64,6 +64,11 @@ proc primary(p: var Parser): Expr =
     if (p.match(tkNil)): return newLiteral(initLiteral())
 
     if (p.match(tkNumber, tkString)): return newLiteral(p.previous().literal)
+    if (p.match(tkSuper)): 
+        let keyword = p.previous()
+        discard p.consume(tkDot, "Expect '.' after 'super'.")
+        let mthd = p.consume(tkIdentifier, "Expect superclass method name.")
+        return newSuper(keyword, mthd)
     if (p.match(tkThis)): return newThis(p.previous())
     if (p.match(tkIdentifier)): return newVariable(p.previous())
 
@@ -195,6 +200,11 @@ proc returnStatement(p: var Parser): Stmt =
 
 proc classDeclaration(p: var Parser): Stmt = 
     let name = p.consume(tkIdentifier, "Expect class name.")
+    var superClass: Expr = nil
+    if (p.match(tkLess)):
+        discard p.consume(tkIdentifier, "Expect superclass name.")
+        superClass = newVariable(p.previous())
+        
     discard p.consume(tkLeftBrace, "Expect '{' before class body.")
 
     var methods: seq[Stmt] = @[]
@@ -203,7 +213,7 @@ proc classDeclaration(p: var Parser): Stmt =
 
     discard p.consume(tkRightBrace, "Expect '}' after class body.")
 
-    result = newClassStmt(name, methods)
+    result = newClassStmt(name, superClass, methods)
 
 proc function(p: var Parser, kind: string): Stmt = 
     var name = p.consume(tkIdentifier, "Expect " & kind & " name")

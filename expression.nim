@@ -12,6 +12,7 @@ proc newCall*(callee: Expr, paren: Token, args: seq[Expr]): Expr = Expr(kind: ek
 proc newAnonFunction*(params: seq[Token], body: seq[Stmt]): Expr = Expr(kind: ekFunction, params: params, body: body)
 proc newGetProp*(obj: Expr, name: Token): Expr = Expr(kind: ekGetProp, getPropObj: obj, getPropName: name)
 proc newSetProp*(obj: Expr, name: Token, val: Expr): Expr = Expr(kind: ekSetProp, setPropObj: obj, setPropName: name, setPropVal: val)
+proc newSuper*(keyword: Token, mthd: Token): Expr = Expr(kind: ekSuper, superKeyword: keyword, superMethod: mthd)
 proc newThis*(keyword: Token, depth: int = -1): Expr = Expr(kind: ekThis, thisKeyword: keyword, thisDepth: depth)
 
 proc `$`*(ex: Expr): string =

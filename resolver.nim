@@ -34,6 +34,8 @@ proc resolveLocal*(r: var Resolver, ex: Expr, name: Token) =
                 ex.varDepth = depth
             of ekAssign:
                 ex.assignDepth = depth
+            of ekSuper:
+                ex.superDepth = depth
             of ekThis:
                 ex.thisDepth = depth
             else:
@@ -67,6 +69,12 @@ proc resolveExpr*(r: var Resolver, ex: Expr) =
     of ekSetProp:
         r.resolveExpr(ex.setPropVal)
         r.resolveExpr(ex.setPropObj)
+    of ekSuper:
+        if (r.currentClass == ctNone):
+            loxError(ex.superKeyword, "Can't use 'super' outside of a class.")
+        elif (r.currentClass != ctSubclass):
+            loxError(ex.superKeyword,  "Can't use 'super' in a class with no superclass.")
+        r.resolveLocal(ex, ex.superKeyword)
     of ekThis:
         if (r.currentClass == ctNone): 
             loxError(ex.thisKeyword, "Can't use 'this' outside of a class.")
@@ -127,6 +135,14 @@ proc resolveStmt*(r: var Resolver, st: Stmt) =
         r.declare(st.className)
         r.define(st.className)
 
+        if (st.superClass != nil):
+            if (st.className.lexeme == st.superClass.name.lexeme):
+                loxError(st.superClass.name, "A class can't inherit from itself.")
+            r.beginScope()
+            r.scopes[^1]["super"] = true
+            r.currentClass = ctSubclass
+            r.resolveExpr(st.superClass)
+
         r.beginScope()
         r.scopes[^1]["this"] = true
 
@@ -135,6 +151,8 @@ proc resolveStmt*(r: var Resolver, st: Stmt) =
             r.resolveFunction(m.params, m.funcBody, fnType)
         
         r.endScope()
+        if (st.superClass != nil):
+            r.endScope()
         r.currentClass = enclosingClass
     of skBreak:
         discard

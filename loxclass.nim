@@ -8,7 +8,12 @@ proc bindInstance*(inst: LoxInstance, mthd: LoxFunction): LoxFunction
 
 # class procs
 proc findMethod*(cls: LoxClass, name: string): LoxFunction = 
-    result = if (cls.methods.hasKey(name)): cls.methods[name] else: nil
+    if (cls.methods.hasKey(name)):
+        result = cls.methods[name] 
+    elif (cls.superClass.kind == lkClass):
+        result = cls.superClass.cls.findMethod(name) 
+    else: 
+        result = nil
 
 # instance procs
 proc get*(inst: LoxInstance, name: Token): Literal = 
