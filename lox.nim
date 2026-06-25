@@ -7,10 +7,17 @@ import ./scanner
 import ./parser
 import ./resolver
 import ./interpreter
+import ./environment
+import ./literal
+import ./function
 import ./error
 
 # keywords that begin statements — skip expression fallback in REPL
 const statementKeywords = {tkVar, tkPrint, tkIf, tkWhile, tkFor, tkFun, tkClass, tkReturn, tkBreak}
+
+proc createStartupEnvironment(): Environment = 
+    result = Environment(values: initTable[string, Literal](), enclosing: nil)
+    result.define("clock", initLiteral(initClock()))
 
 # Run application
 proc run(source: string, env: var Environment, isRepl: bool = false) = 
@@ -45,7 +52,7 @@ proc run(source: string, env: var Environment, isRepl: bool = false) =
 proc runFile(path: string) =
     try:
         let source = readFile(path)
-        var env = Environment(values: initTable[string, Literal](), enclosing: nil)
+        var env = createStartupEnvironment()
         run(source, env)
         if hadError: quit(65)
         if hadRuntimeError: quit(70)
@@ -55,10 +62,10 @@ proc runFile(path: string) =
 
 # Run REPL
 proc runPrompt() = 
+    var env = createStartupEnvironment()
     while true:
         stdout.write("> ")
         try:
-            var env = Environment(values: initTable[string, Literal]())
             let line: string = readLine(stdin)
             if line.len == 0:
                 break
