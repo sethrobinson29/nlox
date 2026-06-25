@@ -19,6 +19,8 @@ more than a row.
 | `HashMap` | `Table` (value) / `TableRef` (reference) | Java's `Map` is always reference-typed; Nim splits it |
 | generated `.java` files via `GenerateAst.java` | hand-written variant objects | short enough to write directly, no codegen needed |
 | `Resolver implements Expr.Visitor, Stmt.Visitor` | `resolveExpr`/`resolveStmt` procs on a `Resolver` object | same visitor-avoidance as the interpreter — see [Resolver](#resolver-no-visitor-depth-stored-on-the-node) |
+| `or`/`and` methods, `error()` | `parseOr`/`parseAnd`, `loxError()` | `or`, `and` are Nim keywords; `error` conflicts with stdlib |
+| separate `.java` files, no circular dependency concern | all mutually-referencing types consolidated in `types.nim` | Nim has no cross-module forward declarations — if A references B and B references A, both must share one `type` block |
 
 ## Variant objects instead of inheritance + visitor
 
@@ -41,11 +43,11 @@ would be independently named in separate Java subclasses (`Unary.right` vs.
 `Binary.right`) need distinct names — `unaryRight`/`right`,
 `printExpr`/`expression`, etc.
 
+**In hindsight:** the shared namespace becomes painful at the scale of Lox's full AST (~15+ node types). `ref object` inheritance — which gives each node its own field namespace and is what the Nim compiler itself uses for its AST — is worth considering for anything this large.
+
 Where the book splits `Logical` from `Binary` for its own visitor method, no
 separate variant is needed — short-circuiting is just a check inside the
 `ekBinary` branch of `evaluate` before evaluating both sides.
-
-In hindsight: the field namespace constraint becomes meaningfully painful at the scale of Lox's full AST (~15+ node types). For a smaller AST the variant object tradeoff clearly favors Nim — less boilerplate, no visitor infrastructure. For a language this size, ref object inheritance (which Nim supports) would have given each node type its own independent field namespace, at the cost of bringing back some visitor-style dispatch. Notably, the Nim compiler itself uses ref object inheritance for its own AST for exactly this reason. The variant object approach is the right default for small-to-medium sum types; for a full language AST, inheritance is worth considering.
 
 ## Named constructors instead of overloading
 
@@ -65,6 +67,11 @@ and runtime values.
 Things Java gets free via inheritance (`equals()`, `toString()`,
 `instanceof`) are hand-written `case`-based procs (`isEqual`, `$`,
 `isTruthy`) — more verbose, but exhaustiveness-checked.
+
+`Literal` also serves double duty as both token literal type (scanner output)
+and runtime value type (interpreter). This caused circular dependency issues
+late in the project — keeping these two concerns in separate types from the
+start would have avoided it.
 
 ## `null` → `nil`, only for `ref` types
 
