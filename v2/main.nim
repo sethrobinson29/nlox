@@ -1,0 +1,3 @@
+# Execute 
+when isMainModule:
+    discard

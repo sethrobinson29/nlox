@@ -1,0 +1,138 @@
+// === arithmetic and operator precedence ===
+print 2 + 3 * 4;       // 14, not 20
+print (2 + 3) * 4;     // 20
+print 10 / 2 - 1;      // 4
+print -5 + 3;           // -2
+
+// === string concatenation ===
+print "hello" + " " + "world";
+
+// === comparison and equality ===
+print 3 > 2;            // true
+print 3 < 2;            // false
+print 1 == 1;           // true
+print 1 == "1";         // false, different types
+print nil == nil;       // true
+
+// === logical operators with short circuit ===
+print true and false;   // false
+print false or true;    // true
+print false and nil;    // false, nil never evaluated
+
+// === variables and assignment ===
+var x = 10;
+var y = 20;
+x = x + y;
+print x;                // 30
+
+// === blocks and scoping ===
+var a = "outer";
+{
+  var a = "inner";
+  print a;              // inner
+}
+print a;                // outer
+
+// === if/else ===
+if (x > 25) {
+  print "big";
+} else {
+  print "small";
+}                       // big
+
+// === while loop ===
+var i = 0;
+while (i < 3) {
+  print i;
+  i = i + 1;
+}                       // 0, 1, 2
+
+// === for loop ===
+for (var j = 0; j < 3; j = j + 1) {
+  print j;
+}                       // 0, 1, 2
+
+// === break ===
+for (var k = 0; k < 10; k = k + 1) {
+  if (k == 3) break;
+  print k;
+}                       // 0, 1, 2
+
+// === functions ===
+fun add(a, b) {
+  return a + b;
+}
+print add(3, 4);        // 7
+
+// === recursion ===
+fun fib(n) {
+  if (n <= 1) return n;
+  return fib(n - 2) + fib(n - 1);
+}
+print fib(10);          // 55
+
+// === closures ===
+fun makeCounter() {
+  var count = 0;
+  fun increment() {
+    count = count + 1;
+    return count;
+  }
+  return increment;
+}
+var counter = makeCounter();
+print counter();        // 1
+print counter();        // 2
+print counter();        // 3
+
+// === anonymous functions ===
+var square = fun(n) { return n * n; };
+print square(5);        // 25
+
+// === native functions ===
+print clock() > 0;      // true
+
+// === classes and instances ===
+class Animal {
+  init(name) {
+    this.name = name;
+  }
+  speak() {
+    print this.name + " makes a sound.";
+  }
+}
+var a = Animal("Cat");
+a.speak();              // Cat makes a sound.
+print a.name;           // Cat
+
+// === methods as values ===
+var speak = a.speak;
+speak();                // Cat makes a sound.
+
+// === inheritance and super ===
+class Dog < Animal {
+  speak() {
+    super.speak();
+    print this.name + " barks.";
+  }
+}
+var d = Dog("Rex");
+d.speak();              // Rex makes a sound. Rex barks.
+
+// === initializer returns this ===
+class Builder {
+  init() {
+    this.value = 0;
+  }
+  set(v) {
+    this.value = v;
+    return this;
+  }
+}
+var b = Builder();
+b.set(42);
+print b.value;          // 42
+
+// === nil ===
+var n;
+print n;                // nil

@@ -1,0 +1,71 @@
+// === type errors ===
+// arithmetic on non-numbers
+// print "foo" - 1;                    // runtime: Operands must be numbers.
+// print true * 2;                     // runtime: Operands must be numbers.
+// print nil + 1;                      // runtime: Operands must be two numbers or two strings.
+
+// === undefined variable ===
+// print undeclared;                   // runtime: Undefined variable 'undeclared'.
+
+// === wrong argument count ===
+fun greet(name) { print name; }
+// greet();                            // runtime: Expected 1 arguments but got 0.
+// greet("a", "b");                    // runtime: Expected 1 arguments but got 2.
+
+// === calling non-callables ===
+var x = 5;
+// x();                                // runtime: Can only call functions and classes.
+// "string"();                         // runtime: Can only call functions and classes.
+
+// === undefined property ===
+class Empty {}
+var e = Empty();
+// print e.missing;                    // runtime: Undefined property 'missing'.
+
+// === property on non-instance ===
+// print (1).foo;                      // runtime: Only instances have properties.
+// print "str".foo;                    // runtime: Only instances have properties.
+
+// === invalid assignment target ===
+// 1 + 2 = 3;                         // parse: Invalid assignment target.
+
+// === missing semicolons ===
+// var y = 5                           // parse: Expect ';' after variable declaration.
+
+// === unmatched braces ===
+// if (true) {                         // parse: Expect '}' after block.
+
+// === return from top level ===
+//return "oops";                      // resolver: Can't return from top-level code.
+
+// === return value from initializer ===
+/* class Bad {
+  init() { return "oops"; }        // resolver: Can't return a value from an initializer.
+} */
+
+// === this outside class ===
+// print this;                         // resolver: Can't use 'this' outside of a class.
+
+// === super outside class ===
+// super.method();                     // resolver: Can't use 'super' outside of a class.
+
+// === super in class with no superclass ===
+/* class NoSuper {
+  method() { super.method(); }     // resolver: Can't use 'super' in a class with no superclass.
+} */
+
+// === inherit from non-class ===
+var NotAClass = "string";
+// class Bad < NotAClass {}           // runtime: Superclass must be a class.
+
+// === self inheritance ===
+// class Circle < Circle {}           // resolver: A class can't inherit from itself.
+
+// === break outside loop ===
+// break;                              // resolver: Cannot use 'break' outside of loop statement.
+
+// === duplicate variable in local scope ===
+/* {
+  var a = 1;
+  var a = 2;                       // resolver: Already a variable with this name in this scope.
+} */
