@@ -1,5 +1,5 @@
 .vscode/
-lox
-*.lox
+v1/lox
+v1/*.lox
 todo.md
-test-cases/
+v1/test-cases/
