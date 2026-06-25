@@ -4,43 +4,16 @@ Working through [Crafting Interpreters](https://craftinginterpreters.com/) by Ro
 
 ## About
 
-Lox is a dynamically typed scripting language built across the book. This implementation covers both the tree-walk interpreter and bytecode virtual machine from the book, with idiomatic adjustments for Nim.
+Lox is a dynamically typed scripting language built across the book. This repo contains both the tree-walk interpreter (Part II) and bytecode virtual machine (Part III), each in its own folder.
 
-## Usage
+## Structure
 
-Build:
-
-```bash
-nim compile lox.nim
-```
-
-Run a script:
-
-```bash
-./lox script.lox
-```
-
-Run the REPL:
-
-```bash
-./lox
-```
-
-## REPL
-
-The REPL accepts both statements (terminated with `;`) and bare expressions.
-Entering an expression without a semicolon evaluates and prints the result
-directly.
+- `v1/` — Tree-walk interpreter. See [v1/README.md](v1/README.md).
+- `v2/` — Bytecode VM. Work in progress.
 
 ## Dependencies
 
 Nim — developed on 2.2.x. Earlier versions may work but are untested.
-
-## Translation Notes
-
-Following along with the book in Java? See [translation-notes.md](translation-notes.md)
-for a breakdown of where and why this implementation diverges from the Java
-reference.
 
 ## Status
 
