@@ -1,9 +1,12 @@
 import ./chunk
+import ./vm
 import ./value # todo: maybe remove?
 import ./debug
 
 # Execute 
 when isMainModule:
+    initVM()
+
     var ch: Chunk
     initChunk(ch)
 
@@ -17,4 +20,6 @@ when isMainModule:
 
     writeChunk(ch, uint8(OP_RETURN), 3)
     disassembleChunk(ch, "test chunk")
+    interpret(ch)
+    freeVM()
     freeChunk(ch)
